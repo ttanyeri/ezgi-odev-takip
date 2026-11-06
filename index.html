@@ -2,19 +2,36 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>7-K Ödev & Kaynak Takip Takvimi</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>7-K Akıllı Ödev ve Görev Panosu (Pro)</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
-    .completed-card { opacity: 0.65; background-color: #f1f5f9 !important; }
-    .completed-text { text-decoration: line-through; color: #64748b; }
-    @keyframes popupBounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-3px); }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f4f7f9; user-select: none; }
+    .completed-card { opacity: 0.5; background-color: #f8fafc !important; }
+    .completed-text { text-decoration: line-through; color: #94a3b8; }
+    .digital-font { font-family: 'JetBrains Mono', monospace; }
+    input[type=range] { -webkit-appearance: none; background: transparent; width: 100%; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%; background: #4f46e5; cursor: pointer; margin-top: -4px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+    input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cursor: pointer; background: #e2e8f0; border-radius: 4px; }
+    input[type=range]:focus { outline: none; }
+    .view-btn-active { background-color: #4f46e5 !important; color: white !important; }
+    .filter-pill-active { background-color: #4f46e5 !important; color: white !important; border-color: #4f46e5 !important; }
+    
+    @keyframes slideDownBounce {
+      0% { transform: translate(-50%, -100%); opacity: 0; }
+      50% { transform: translate(-50%, 10px); opacity: 1; }
+      100% { transform: translate(-50%, 0); opacity: 1; }
     }
-    .popup-alert { animation: popupBounce 2s infinite ease-in-out; }
+    .popup-animate { animation: slideDownBounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    
+    @keyframes pulseAlert {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    .alert-pulse { animation: pulseAlert 1s infinite; }
+
     @media print {
       .no-print { display: none !important; }
       body { background: white !important; }
@@ -24,19 +41,18 @@
 </head>
 <body class="text-slate-800 min-h-screen pb-12">
 
-  <!-- ÜST BAR -->
+
+<!-- ÜST BAR (Saat, Sayaç ve Butonlar) -->
   <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm no-print">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+    <div class="max-w-[1600px] mx-auto px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-3">
-        <div class="w-11 h-11 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-extrabold text-lg shadow">7-K</div>
+        <!-- Ezgi'nin Fotoğrafı -->
+        <div class="w-10 h-10 rounded-xl shadow-sm overflow-hidden border border-slate-200 shrink-0">
+          <img src="https://drive.google.com/uc?export=view&id=1sVRJRYZbN8TYRpBbkVlKnTHfXjjF3SiM" alt="Ezgi" class="w-full h-full object-cover">
+        </div>
         <div>
-          <div class="flex items-center gap-2">
-            <h1 class="font-bold text-slate-900 text-base sm:text-lg leading-tight">Lütfi Ege O.O. • 7-K Takip</h1>
-            <span class="text-[11px] font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-lg border border-indigo-200">Sınıf Öğr: Arzu Ataman</span>
-          </div>
-          <div class="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-            <span>Okul, Özel Ders & Kitap Okuma Entegre Takvimi</span>
-            <span>•</span>
+          <h1 class="font-bold text-slate-900 text-sm sm:text-base leading-tight">Lütfi Ege O.O. • 7-K Takip</h1>
+          <div class="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
             <span id="syncStatusBadge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium">
               <span class="w-2 h-2 rounded-full bg-slate-400" id="syncDot"></span>
               <span id="syncText">Buluta Bağlanıyor...</span>
@@ -45,131 +61,231 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-2 flex-wrap">
-        <button onclick="toggleKioskMode()" id="btnKiosk" class="px-3 py-2 text-xs font-bold rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition">
-          📺 Tam Ekran
-        </button>
-        <button onclick="syncFromCloud(true)" class="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition">
-          🔄 Eşitle
-        </button>
-        <button onclick="openBooksModal()" class="px-3 py-2 text-xs font-semibold rounded-xl bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 transition">
-          📚 Kitaplık (<span id="bookCountBadge">0</span>)
-        </button>
-        <button onclick="openReadingModal()" class="px-3 py-2 text-xs font-semibold rounded-xl bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200 transition">
-          📖 Okuma Listesi (<span id="readingCountBadge">0</span>)
-        </button>
-        <button onclick="window.print()" class="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition">
-          🖨️ Yazdır
-        </button>
-        <button onclick="openAddModal()" class="px-4 py-2 text-xs sm:text-sm font-bold rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition">
-          + Ödev / Görev Ekle
-        </button>
+      <!-- Görünüm Seçici -->
+      <div class="flex items-center bg-slate-100 p-0.5 rounded-xl shadow-inner border border-slate-200">
+        <button onclick="changeView('daily')" id="btnViewDaily" class="px-3 py-1.5 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900 transition">Günlük</button>
+        <button onclick="changeView('weekly')" id="btnViewWeekly" class="px-3 py-1.5 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900 transition view-btn-active">Haftalık</button>
+        <button onclick="changeView('monthly')" id="btnViewMonthly" class="px-3 py-1.5 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900 transition">Aylık</button>
       </div>
+
+      <div class="flex items-center gap-2 flex-wrap">
+        <button onclick="window.location.reload(true)" class="px-3 py-2 text-xs font-bold rounded-xl bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-300 transition shadow-xs">🔄 Sayfayı Yenile</button>
+        <button onclick="toggleKioskMode()" id="btnKiosk" class="px-3 py-2 text-xs font-bold rounded-xl bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 transition">📺 Tam Ekran</button>
+        <button onclick="syncFromCloud(true)" class="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 transition">☁️ Eşitle</button>
+        <button onclick="openBooksModal()" class="px-3 py-2 text-xs font-semibold rounded-xl bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 transition">📚 Kitaplık (<span id="bookCountBadge">0</span>)</button>
+        <button onclick="openReadingModal()" class="px-3 py-2 text-xs font-semibold rounded-xl bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200 transition">📖 Okuma Listesi (<span id="readingCountBadge">0</span>)</button>
+        <button onclick="window.print()" class="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 transition">🖨️ Yazdır</button>
+        <button onclick="openAddModal()" class="px-4 py-2 text-xs sm:text-sm font-bold rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition">+ Görev Ekle</button>
+      </div>
+     
+
     </div>
   </header>
 
-  <main class="max-w-7xl mx-auto px-4 mt-5 space-y-5">
 
-    <!-- CANLI POP-UP HATIRLATMA BİLDİRİM ÇUBUĞU -->
-    <div id="livePopupBanner" class="hidden bg-gradient-to-r from-amber-500 to-rose-600 text-white p-4 rounded-2xl shadow-md popup-alert flex items-center justify-between flex-wrap gap-3 no-print">
-      <div class="flex items-center gap-3">
-        <span class="text-2xl">🔔</span>
-        <div>
-          <div class="font-extrabold text-sm sm:text-base">Öğrenci Hatırlatması / Bugün Teslim Edilecek Görevler Var!</div>
-          <div id="livePopupText" class="text-xs text-amber-100 font-medium">Lütfen aşağıdaki kontrol günü gelen ödevleri tamamlayın.</div>
-        </div>
+  <!-- CANLI POP-UP BİLDİRİM -->
+  <div id="livePopupBanner" class="fixed top-3 left-1/2 transform -translate-x-1/2 z-50 w-11/12 max-w-lg bg-gradient-to-r from-rose-600 to-red-700 text-white p-3.5 rounded-2xl shadow-2xl hidden flex-col sm:flex-row items-center justify-between gap-3 no-print border-2 border-white/20">
+    <div class="flex items-center gap-2.5">
+      <span class="text-2xl animate-bounce">🔔</span>
+      <div>
+        <div class="font-extrabold text-sm">Dikkat: Bekleyen Görevler Var!</div>
+        <div id="livePopupText" class="text-xs text-rose-100 font-medium">Teslim günü gelmiş veya yaklaşan görevler bulunuyor.</div>
       </div>
-      <button onclick="document.getElementById('livePopupBanner').style.display='none'" class="bg-white/20 hover:bg-white/30 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition">
-        Bildirimi Kapat
-      </button>
     </div>
+    <button onclick="closePopupBanner()" class="bg-white text-rose-700 hover:bg-rose-50 text-[11px] font-extrabold px-3 py-1.5 rounded-xl transition shadow-sm shrink-0">Kapat</button>
+  </div>
 
-    <!-- KONTROL GÜNÜ GEÇMİŞ / BEKLEYEN ÖDEVLER ACİL PANELİ -->
+  <main class="max-w-[1600px] mx-auto px-4 mt-4 space-y-4">
+
+    <!-- GEÇMİŞ / BEKLEYEN ÖDEVLER ACİL PANELİ -->
     <section id="overdueSection" class="hidden bg-rose-50 border-2 border-rose-300 rounded-2xl p-4 shadow-sm no-print">
       <div class="flex items-center justify-between mb-3">
         <div class="flex items-center gap-2">
           <span class="text-rose-600 text-xl animate-pulse">⚠️</span>
-          <h2 class="font-extrabold text-rose-900 text-sm sm:text-base">Kontrol Günü Geçmiş / Bekleyen Görevler <span id="overdueCountBadge" class="ml-1 px-2 py-0.5 text-xs bg-rose-600 text-white rounded-full">0</span></h2>
+          <h2 class="font-extrabold text-rose-900 text-sm sm:text-base">Günü Geçmiş / Bekleyen Görevler <span id="overdueCountBadge" class="ml-1 px-2 py-0.5 text-xs bg-rose-600 text-white rounded-full">0</span></h2>
         </div>
         <span class="text-xs font-bold text-rose-700">Öğretmen kontrolü öncesi tamamlanmalı!</span>
       </div>
       <div id="overdueList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
     </section>
 
-    <!-- İSTATİSTİK ÖZET KUTULARI -->
-    <section class="grid grid-cols-2 md:grid-cols-4 gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-      <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+    <!-- TIKLANABİLİR İSTATİSTİK ÖZET KUTULARI VE SAAT/SAYAÇ (TEK SATIRDA) -->
+    <section class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs no-print">
+      
+      <!-- 1. Devam Eden -->
+      <div onclick="openStatsModal('pending')" class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 cursor-pointer hover:bg-blue-50 transition hover:border-blue-300">
         <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">🕒</div>
         <div>
-          <div class="text-xs text-slate-500 font-semibold">Devam Eden</div>
-          <div id="statPendingCount" class="text-lg font-extrabold text-slate-900">0</div>
+          <div class="text-[11px] text-slate-500 font-semibold">Devam Eden</div>
+          <div id="statPendingCount" class="text-xl font-extrabold text-slate-900">0</div>
         </div>
       </div>
-      <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+      
+      <!-- 2. Tamamlanan -->
+      <div onclick="openStatsModal('done')" class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 cursor-pointer hover:bg-emerald-50 transition hover:border-emerald-300">
         <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">✅</div>
         <div>
-          <div class="text-xs text-slate-500 font-semibold">Tamamlanan</div>
-          <div id="statDoneCount" class="text-lg font-extrabold text-emerald-600">0</div>
+          <div class="text-[11px] text-slate-500 font-semibold">Tamamlanan</div>
+          <div id="statDoneCount" class="text-xl font-extrabold text-emerald-600">0</div>
         </div>
       </div>
-      <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+      
+      <!-- 3. Bugün Kontrol -->
+      <div onclick="openStatsModal('today')" class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 cursor-pointer hover:bg-rose-50 transition hover:border-rose-300">
         <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold">📌</div>
         <div>
-          <div class="text-xs text-slate-500 font-semibold">Bugün Kontrol</div>
-          <div id="statTodayCheck" class="text-lg font-extrabold text-rose-600">0</div>
+          <div class="text-[11px] text-slate-500 font-semibold">Bugün Kontrol</div>
+          <div id="statTodayCheck" class="text-xl font-extrabold text-rose-600">0</div>
         </div>
       </div>
+      
+      <!-- 4. İlerleme -->
+      <div class="flex flex-col justify-center p-3 rounded-xl bg-slate-50 border border-slate-100">
+        <div class="flex justify-between text-[11px] text-slate-500 font-semibold mb-1">
+          <span>Tamamlama</span>
+          <span id="statPercentText" class="text-indigo-600 font-bold">0%</span>
+        </div>
+        <div class="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
+          <div id="statProgressBar" class="bg-indigo-600 h-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+      </div>
+
+       <!-- 5. Dijital Saat -->
       <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-        <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">📊</div>
-        <div class="flex-1">
-          <div class="flex justify-between text-xs text-slate-500 font-semibold">
-            <span>Tamamlama</span>
-            <span id="statPercentText">0%</span>
-          </div>
-          <div class="w-full bg-slate-200 h-2 rounded-full mt-1 overflow-hidden">
-            <div id="statProgressBar" class="bg-indigo-600 h-full transition-all duration-500" style="width: 0%"></div>
-          </div>
+        <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-lg">🕒</div>
+        <div>
+          <div id="liveDateSpan" class="text-[11px] text-slate-500 font-semibold">--</div>
+          <div id="liveClockDisplay" class="text-xl font-extrabold digital-font tracking-widest text-slate-900">00:00</div>
+        </div>
+      </div>
+
+
+      <!-- 6. Geri Sayım Aracı (Tıklanabilir) -->
+      <div onclick="openTimerModal()" class="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 cursor-pointer hover:from-indigo-100 hover:to-purple-100 transition shadow-xs group">
+        <div class="w-10 h-10 rounded-xl bg-white text-indigo-600 flex items-center justify-center font-bold text-xl shadow-xs group-hover:scale-110 transition-transform">⏱️</div>
+        <div>
+          <div class="text-[10px] text-indigo-500 font-semibold">Odak / Sayaç</div>
+          <div id="timerRowText" class="text-lg font-extrabold text-indigo-900 digital-font">Başlat</div>
         </div>
       </div>
     </section>
 
-    <!-- HAFTA SEÇİCİ VE FİLTRELER -->
-    <div class="flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm">
-      <div class="flex items-center gap-2">
-        <button onclick="changeWeek(-1)" class="p-2 rounded-xl hover:bg-slate-100 text-slate-600 font-bold no-print">◀ Önceki</button>
-        <button onclick="goToday()" class="px-3 py-1.5 text-xs font-bold bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 no-print">Bu Hafta</button>
-        <button onclick="changeWeek(1)" class="p-2 rounded-xl hover:bg-slate-100 text-slate-600 font-bold no-print">Sonraki ▶</button>
-        <span id="weekRangeLabel" class="font-bold text-slate-800 text-sm sm:text-base ml-2"></span>
+    <!-- HIZLI NOTLAR -->
+    <section class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-sm no-print">
+      <div class="flex items-center justify-between mb-2 border-b border-slate-100 pb-2">
+        <div class="flex items-center gap-2">
+          <span class="text-lg">📝</span>
+          <h2 class="font-bold text-slate-800 text-xs sm:text-sm">Hızlı Notlar & Hatırlatıcılar</h2>
+        </div>
+        <div class="flex items-center gap-2">
+          <select id="filterNoteStatus" onchange="renderNotes()" class="text-xs font-semibold rounded-lg border border-slate-200 px-2 py-1 outline-none bg-slate-50 text-slate-600">
+            <option value="ALL">Tümü</option>
+            <option value="PENDING" selected>Bekleyen</option>
+            <option value="DONE">Biten</option>
+          </select>
+          <button onclick="addQuickNote()" class="text-xs font-bold bg-amber-100 text-amber-800 px-3 py-1.5 rounded-lg hover:bg-amber-200 shadow-xs transition">+ Not Ekle</button>
+        </div>
+      </div>
+      <div id="quickNotesList" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 max-h-32 overflow-y-auto pr-1"></div>
+    </section>
+
+    <!-- TAKVİM KONTROLLERİ VE FİLTRELER -->
+    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2">
+          <button onclick="changeDate(-1)" class="p-2 rounded-xl hover:bg-slate-100 text-slate-600 font-bold text-xs no-print">◀ Önceki</button>
+          <button onclick="goToday()" class="px-3 py-1.5 text-xs font-bold bg-indigo-50 text-indigo-700 rounded-xl hover:bg-indigo-100 no-print">Bugün</button>
+          <button onclick="changeDate(1)" class="p-2 rounded-xl hover:bg-slate-100 text-slate-600 font-bold text-xs no-print">Sonraki ▶</button>
+          <span id="dateRangeLabel" class="font-bold text-slate-800 text-sm sm:text-base ml-2"></span>
+        </div>
+
+        <div class="flex items-center gap-1.5 flex-wrap" id="statusFilterContainer">
+          <span class="text-xs font-bold text-slate-500 mr-1">Durum:</span>
+          <button onclick="setStatusFilter('ALL')" id="status_ALL" class="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 text-slate-700 filter-pill-active transition">Hepsi</button>
+          <button onclick="setStatusFilter('PENDING')" id="status_PENDING" class="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 text-slate-700 transition">Bekleyenler</button>
+          <button onclick="setStatusFilter('DONE')" id="status_DONE" class="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 text-slate-700 transition">Tamamlananlar</button>
+        </div>
       </div>
 
-      <div class="flex items-center gap-2 flex-wrap">
-        <select id="filterSubject" onchange="renderCalendar()" class="text-xs font-semibold rounded-xl border border-slate-300 px-3 py-2 bg-white outline-none">
-          <option value="ALL">Tüm Dersler ve Görevler</option>
-          <option value="MAT6">Matematik (Okul)</option>
-          <option value="FEN6">Fen Bilimleri (Okul)</option>
-          <option value="TRK7">Türkçe (Okul)</option>
-          <option value="SOS6">Sosyal Bilgiler</option>
-          <option value="YD7">Yabancı Dil (İngilizce)</option>
-          <option value="DIN6">Din Kültürü ve Ahlak B.</option>
-          <option value="OZEL_MAT">Özel Ders - Matematik</option>
-          <option value="OZEL_FEN">Özel Ders - Fen Bilimleri</option>
-          <option value="OZEL_TRK">Özel Ders - Türkçe</option>
-          <option value="KİTAP">Kitap Okuma Görevi</option>
-        </select>
-        <select id="filterStatus" onchange="renderCalendar()" class="text-xs font-semibold rounded-xl border border-slate-300 px-3 py-2 bg-white outline-none">
-          <option value="ALL">Tümü (Yapıldı & Bekleyen)</option>
-          <option value="PENDING">Sadece Bekleyenler</option>
-          <option value="DONE">Sadece Tamamlananlar</option>
-        </select>
+      <div class="flex items-center gap-1.5 flex-wrap" id="subjectFilterContainer">
+        <span class="text-xs font-bold text-slate-500 mr-1">Dersler:</span>
+        <button onclick="setSubjectFilter('ALL')" id="subj_ALL" class="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 text-slate-700 filter-pill-active transition">Tüm Dersler</button>
+        <button onclick="setSubjectFilter('MAT6')" id="subj_MAT6" class="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 text-slate-700 transition">Matematik</button>
+        <button onclick="setSubjectFilter('FEN6')" id="subj_FEN6" class="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 text-slate-700 transition">Fen Bilimleri</button>
+        <button onclick="setSubjectFilter('TRK7')" id="subj_TRK7" class="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 text-slate-700 transition">Türkçe</button>
+        <button onclick="setSubjectFilter('SOS6')" id="subj_SOS6" class="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 text-slate-700 transition">Sosyal Bilgiler</button>
+        <button onclick="setSubjectFilter('YD7')" id="subj_YD7" class="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 text-slate-700 transition">İngilizce</button>
+        <button onclick="setSubjectFilter('DIN6')" id="subj_DIN6" class="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 text-slate-700 transition">Din Kültürü</button>
+        <button onclick="setSubjectFilter('OZEL_MAT')" id="subj_OZEL_MAT" class="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 text-slate-700 transition">Özel Matematik</button>
+        <button onclick="setSubjectFilter('OZEL_FEN')" id="subj_OZEL_FEN" class="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 text-slate-700 transition">Özel Fen</button>
+        <button onclick="setSubjectFilter('OZEL_TRK')" id="subj_OZEL_TRK" class="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 text-slate-700 transition">Özel Türkçe</button>
+        <button onclick="setSubjectFilter('KİTAP')" id="subj_KİTAP" class="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 text-slate-700 transition">Kitap Okuma</button>
       </div>
     </div>
 
-    <!-- HAFTALIK 5 GÜNLÜK TAKVİM SÜTUNLARI -->
-    <section id="calendarGrid" class="grid grid-cols-1 md:grid-cols-5 gap-4 print-grid"></section>
+    <!-- TAKVİM GÖRÜNÜM ALANI -->
+    <section id="calendarGrid" class="transition-all duration-300"></section>
 
   </main>
 
-  <!-- ÖDEV EKLEME / DÜZENLEME MODALI -->
+  <!-- ÖNE ÇIKAN ZAMANLAYICI (GERİ SAYIM) MODALI -->
+  <div id="timerModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm hidden items-center justify-center z-50 p-4 no-print">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl flex flex-col items-center relative">
+      <button onclick="closeTimerModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-xl font-bold">✕</button>
+      
+      <!-- Kurulum / Bekleme Ekranı -->
+      <div id="timerSetupView" class="w-full text-center space-y-5">
+        <div class="text-4xl">⏱️</div>
+        <h3 class="font-extrabold text-xl text-indigo-900">Süre Belirle</h3>
+        
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-2">Dakika Girin (Serbest):</label>
+          <input type="number" id="customTimerInput" value="25" min="1" max="180" class="w-32 text-center text-3xl font-extrabold p-2 rounded-xl border-2 border-indigo-200 outline-none focus:border-indigo-600 text-indigo-900 digital-font mx-auto block" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 mt-4">
+          <button onclick="document.getElementById('customTimerInput').value=15" class="py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl">15 Dk</button>
+          <button onclick="document.getElementById('customTimerInput').value=25" class="py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl">25 Dk (Pomo)</button>
+          <button onclick="document.getElementById('customTimerInput').value=40" class="py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl">40 Dk</button>
+          <button onclick="document.getElementById('customTimerInput').value=45" class="py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl">45 Dk</button>
+        </div>
+        
+        <button onclick="startTimerFromInput()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-sm py-3.5 rounded-xl shadow-lg mt-2">▶ SAYACI BAŞLAT</button>
+      </div>
+
+      <!-- Çalışma (Geri Sayım) Ekranı -->
+      <div id="timerRunningView" class="hidden w-full text-center space-y-6">
+        <h3 class="font-extrabold text-sm text-indigo-500 uppercase tracking-widest">Odak Modu Aktif</h3>
+        <div id="timerBigDisplay" class="text-7xl font-extrabold digital-font text-indigo-900 tabular-nums tracking-tighter">25:00</div>
+        
+        <div class="flex justify-center gap-3 w-full">
+          <button onclick="pauseResumeTimer()" id="btnPauseResume" class="flex-1 py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm rounded-xl shadow-md">⏸ Duraklat</button>
+          <button onclick="stopTimer()" class="flex-1 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-sm rounded-xl">⏹ Bitir</button>
+        </div>
+      </div>
+      
+      <!-- Bitti / Uyarı Ekranı -->
+      <div id="timerFinishedView" class="hidden w-full text-center space-y-5 alert-pulse">
+        <div class="text-6xl animate-bounce">⏰</div>
+        <h3 class="font-extrabold text-3xl text-rose-600">SÜRE BİTTİ!</h3>
+        <p class="text-sm font-medium text-slate-600">Harika bir çalışma seansı tamamlandı.<br>Şimdi dinlenme zamanı.</p>
+        <button onclick="stopTimer()" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-sm py-3.5 rounded-xl shadow-lg mt-2">Tamam / Kapat</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- İSTATİSTİK MODALI -->
+  <div id="statsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4 no-print">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-5 shadow-2xl flex flex-col max-h-[90vh]">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+        <h3 id="statsModalTitle" class="font-bold text-base text-slate-900">Görev Detayları</h3>
+        <button onclick="closeStatsModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold bg-slate-100 rounded-full w-7 h-7 flex items-center justify-center">✕</button>
+      </div>
+      <div id="statsListContainer" class="flex-1 overflow-y-auto space-y-4 pr-1"></div>
+    </div>
+  </div>
+
+  <!-- ÖDEV EKLEME MODALI -->
   <div id="addModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs hidden items-center justify-center z-50 p-4 no-print">
     <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b pb-3">
@@ -228,10 +344,11 @@
         <button onclick="closeBooksModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">✕</button>
       </div>
 
-      <form onsubmit="addNewBook(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-slate-50 p-3 rounded-xl border">
+      <form onsubmit="saveBookForm(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-slate-50 p-3 rounded-xl border">
+        <input type="hidden" id="editingBookId" value="" />
         <select id="newBookSubject" required class="rounded-lg border border-slate-300 px-2.5 py-2 text-xs font-semibold"></select>
         <input type="text" id="newBookTitle" placeholder="Yayınevi ve Kitap Adı" required class="rounded-lg border border-slate-300 px-2.5 py-2 text-xs" />
-        <button type="submit" class="bg-indigo-600 text-white font-bold text-xs rounded-lg px-3 py-2 hover:bg-indigo-700">+ Kitap Ekle</button>
+        <button type="submit" id="bookSubmitBtn" class="bg-indigo-600 text-white font-bold text-xs rounded-lg px-3 py-2 hover:bg-indigo-700">+ Kitap Ekle</button>
       </form>
 
       <div id="booksListContainer" class="space-y-2 max-h-96 overflow-y-auto"></div>
@@ -257,7 +374,7 @@
   </div>
 
   <script>
-    const SABIT_BULUT_URL = "https://script.google.com/macros/s/AKfycbzJnbyF9GQGpHx49NHAcmVNTuYer-Zfmmx3lOEmtccv3I3CBzvyuQ5EhAncdIU8glKplQ/exec";
+    const SABIT_BULUT_URL = "https://script.google.com/macros/s/AKfycbwaEmWZCDrb1TRMSQABt35XdvkWHX90d0PcIQHAHPdYgJXsLGQ2AGnrr99_Ws4AChcVnA/exec";
 
     const SUBJECTS = {
       MAT6: { name: 'Matematik (Okul)', teacher: 'Hakan Berber', color: 'border-blue-500 bg-blue-50/70 text-blue-950', badge: 'bg-blue-100 text-blue-800', bookBadge: 'bg-blue-200 text-blue-900', days: [3, 4, 5] },
@@ -280,25 +397,33 @@
       5: ['MAT6 (2)', 'SFS17 (2)', 'SOS6 (2)', 'TRK7 (1)']
     };
 
+    // 22 ADET TAM KİTAP LİSTESİ
     const DEFAULT_BOOKS = [
       { id: 'b1', subject: 'FEN6', title: 'Gizli Yayınları - Usta İşi Fen Bilimleri Soru Bankası' },
       { id: 'b2', subject: 'FEN6', title: 'Jett (Ünlüler Karması) - Fen Bilimleri Fasikülleri' },
       { id: 'b3', subject: 'FEN6', title: 'Fenomen (7B) - Fen Bilimleri Soru Bankası' },
       { id: 'b4', subject: 'FEN6', title: 'Hız Yayınları - 32 Haftalık Deneme Fen Bilimleri' },
-      { id: 'b5', subject: 'TRK7', title: 'Fenomen - 7. Sınıf Türkçe Fasikülleri (6 Fasikül)' },
-      { id: 'b6', subject: 'TRK7', title: 'Ankara Yayıncılık - Güçlendiren Paragraf Soru Bankası' },
-      { id: 'b7', subject: 'MAT6', title: 'Ulti Yayınları - Matematik Fasikülleri' },
-      { id: 'b8', subject: 'OZEL_MAT', title: 'Mozaik Bağlam Temelli Matematik Soru Bankası' },
-      { id: 'b9', subject: 'OZEL_MAT', title: 'Soru Hazinesi Matematik' },
-      { id: 'b10', subject: 'OZEL_MAT', title: 'Adım Adım Zirveye Matematik' },
-      { id: 'b11', subject: 'OZEL_MAT', title: 'Fenomen 7B Matematik Soru Bankası' },
-      { id: 'b12', subject: 'OZEL_MAT', title: 'HiperZeka Bağlam Matematik Soru Bankası' },
-      { id: 'b13', subject: 'OZEL_MAT', title: 'Kondisyon Haftalık Denemeler Matematik' },
-      { id: 'b14', subject: 'OZEL_TRK', title: 'Mozaik 7. Sınıf Paragraf Soru Bankası' },
-      { id: 'b15', subject: 'OZEL_TRK', title: 'Mozaik Türkçe Fasikül Defter' },
-      { id: 'b16', subject: 'OZEL_TRK', title: 'Madalyonun Yüzü Paragraf' }
+      { id: 'b5', subject: 'FEN6', title: 'MEB Fen Bilimleri Ders Kitabı / Etkinlik Kağıdı' },
+      { id: 'b6', subject: 'TRK7', title: 'Fenomen - 7. Sınıf Türkçe Fasikülleri (6 Fasikül)' },
+      { id: 'b7', subject: 'TRK7', title: 'Ankara Yayıncılık - Güçlendiren Paragraf Soru Bankası' },
+      { id: 'b8', subject: 'TRK7', title: 'MEB Türkçe Ders Kitabı / Çalışma Kağıdı' },
+      { id: 'b9', subject: 'MAT6', title: 'Ulti Yayınları - Matematik Fasikülleri' },
+      { id: 'b10', subject: 'MAT6', title: 'MEB Matematik Ders Kitabı / Çalışma Kağıdı' },
+      { id: 'b11', subject: 'YD7', title: 'Smart - Grade 7 Powerful İngilizce Fasikülleri' },
+      { id: 'b12', subject: 'YD7', title: 'MEB İngilizce Ders Kitabı / Çalışma Kağıdı' },
+      { id: 'b13', subject: 'SOS6', title: 'Mozaik Yayınları - Sosyal Bilgiler Fasikül Defter' },
+      { id: 'b14', subject: 'SOS6', title: 'MEB Sosyal Bilgiler Ders Kitabı / Çalışma Kağıdı' },
+      { id: 'b15', subject: 'DIN6', title: 'Hız Yayınları - Din Kültürü Soru Bankası' },
+      { id: 'b16', subject: 'DIN6', title: 'MEB Din Kültürü Ders Kitabı' },
+      { id: 'b17', subject: 'OZEL_MAT', title: 'Nar Test Soru Hazinesi' },
+      { id: 'b18', subject: 'OZEL_MAT', title: 'Bal Bağlam Hiperzeka' },
+      { id: 'b19', subject: 'OZEL_MAT', title: 'Fenomen B' },
+      { id: 'b20', subject: 'OZEL_MAT', title: 'Newton Kondisyon Haftalık Deneme' },
+      { id: 'b21', subject: 'OZEL_MAT', title: 'Mozaik Hit Haftalık Deneme' },
+      { id: 'b22', subject: 'OZEL_MAT', title: 'Newton Adım Adım Zirveye' }
     ];
 
+    // 14 ADET TAM OKUMA LİSTESİ
     const DEFAULT_READING_LIST = [
       { id: 'r1', title: 'Dünya Yaramazlık Tarihi (Şermin Yaşar)', range: '1-15 Ekim', start: '2026-10-01', end: '2026-10-15' },
       { id: 'r2', title: 'Rüzgarı Dizginleyen Çocuk (W. Kamkwama)', range: '15-30 Ekim', start: '2026-10-15', end: '2026-10-30' },
@@ -320,7 +445,153 @@
     let books = DEFAULT_BOOKS;
     let readingList = DEFAULT_READING_LIST;
     let cloudUrl = SABIT_BULUT_URL;
+    let currentView = 'weekly';
+    let targetDate = new Date();
     let currentMonday = getMonday(new Date());
+    let popupShownThisSession = false;
+
+    let activeSubjectFilter = 'ALL';
+    let activeStatusFilter = 'ALL';
+
+    // GERİ SAYIM SAYAÇ DEĞİŞKENLERİ VE FONKSİYONLARI
+    let timerInterval = null;
+    let totalSecondsRemaining = 25 * 60; // 25 dk varsayılan
+    let isTimerRunning = false;
+    let isTimerPaused = false;
+
+    function initClockAndTimer() {
+      // Dijital Saat Güncelleyici (Saniye Kaldırıldı)
+      setInterval(() => {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        document.getElementById('liveClockDisplay').textContent = `${hours}:${minutes}`;
+        
+        const days = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+        const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+        document.getElementById('liveDateSpan').textContent = `${now.getDate()} ${months[now.getMonth()]} ${days[now.getDay()]}`;
+      }, 1000);
+    }
+
+    function openTimerModal() {
+      const modal = document.getElementById('timerModal');
+      const setupView = document.getElementById('timerSetupView');
+      const runningView = document.getElementById('timerRunningView');
+      const finishedView = document.getElementById('timerFinishedView');
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+
+      if (isTimerRunning || isTimerPaused) {
+        setupView.classList.add('hidden');
+        finishedView.classList.add('hidden');
+        runningView.classList.remove('hidden');
+        updateTimerDisplay();
+      } else {
+        runningView.classList.add('hidden');
+        finishedView.classList.add('hidden');
+        setupView.classList.remove('hidden');
+      }
+    }
+
+    function closeTimerModal() {
+      document.getElementById('timerModal').classList.add('hidden');
+      document.getElementById('timerModal').classList.remove('flex');
+    }
+
+    function startTimerFromInput() {
+      let mins = parseInt(document.getElementById('customTimerInput').value);
+      if (isNaN(mins) || mins < 1) mins = 25;
+      
+      totalSecondsRemaining = mins * 60;
+      isTimerRunning = true;
+      isTimerPaused = false;
+      
+      document.getElementById('timerSetupView').classList.add('hidden');
+      document.getElementById('timerRunningView').classList.remove('hidden');
+      document.getElementById('btnPauseResume').textContent = '⏸ Duraklat';
+      
+      updateTimerDisplay();
+      
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(timerTick, 1000);
+      updateRowTimerText();
+    }
+
+    function timerTick() {
+      if (totalSecondsRemaining > 0) {
+        totalSecondsRemaining--;
+        updateTimerDisplay();
+        updateRowTimerText();
+      } else {
+        clearInterval(timerInterval);
+        isTimerRunning = false;
+        isTimerPaused = false;
+        document.getElementById('timerRunningView').classList.add('hidden');
+        document.getElementById('timerFinishedView').classList.remove('hidden');
+        updateRowTimerText('Bitti!');
+      }
+    }
+
+    function updateTimerDisplay() {
+      const m = Math.floor(totalSecondsRemaining / 60);
+      const s = totalSecondsRemaining % 60;
+      document.getElementById('timerBigDisplay').textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function updateRowTimerText(txt) {
+      if(txt) {
+        document.getElementById('timerRowText').textContent = txt;
+        return;
+      }
+      if(isTimerRunning) {
+        const m = Math.floor(totalSecondsRemaining / 60);
+        const s = totalSecondsRemaining % 60;
+        document.getElementById('timerRowText').textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      } else {
+        document.getElementById('timerRowText').textContent = 'Başlat';
+      }
+    }
+
+    function pauseResumeTimer() {
+      const btn = document.getElementById('btnPauseResume');
+      if (isTimerRunning) {
+        clearInterval(timerInterval);
+        isTimerRunning = false;
+        isTimerPaused = true;
+        btn.textContent = '▶ Devam Et';
+      } else if (isTimerPaused) {
+        isTimerRunning = true;
+        isTimerPaused = false;
+        timerInterval = setInterval(timerTick, 1000);
+        btn.textContent = '⏸ Duraklat';
+      }
+    }
+
+    function stopTimer() {
+      clearInterval(timerInterval);
+      isTimerRunning = false;
+      isTimerPaused = false;
+      updateRowTimerText('Başlat');
+      closeTimerModal();
+    }
+
+
+    function setSubjectFilter(subj) {
+      activeSubjectFilter = subj;
+      document.querySelectorAll('#subjectFilterContainer button').forEach(b => b.classList.remove('filter-pill-active'));
+      const activeBtn = document.getElementById('subj_' + subj);
+      if (activeBtn) activeBtn.classList.add('filter-pill-active');
+      renderCalendar();
+    }
+
+    function setStatusFilter(status) {
+      activeStatusFilter = status;
+      document.querySelectorAll('#statusFilterContainer button').forEach(b => b.classList.remove('filter-pill-active'));
+      const activeBtn = document.getElementById('status_' + status);
+      if (activeBtn) activeBtn.classList.add('filter-pill-active');
+      renderCalendar();
+    }
 
     function getMonday(d) {
       const date = new Date(d);
@@ -380,9 +651,14 @@
         const res = await fetch(`${cloudUrl}${sep}action=load&t=${Date.now()}`);
         const json = await res.json();
         if (json.status === 'ok' && json.data) {
-          if (Array.isArray(json.data.assignments)) assignments = json.data.assignments;
-          if (Array.isArray(json.data.books) && json.data.books.length > 0) books = json.data.books;
-          if (Array.isArray(json.data.readingList) && json.data.readingList.length > 0) readingList = json.data.readingList;
+          // ÖDEVLER / NOTLAR: Buluttan gelen doluysa al, boşsa yereldeki user verilerini sakla (ezme!)
+          if (Array.isArray(json.data.assignments) && json.data.assignments.length > 0) {
+            assignments = json.data.assignments;
+          }
+          // KİTAPLAR: Buluttakiler eksikse DEFAULT_BOOKS korunsun, değilse buluttakiler gelsin
+          if (Array.isArray(json.data.books) && json.data.books.length >= DEFAULT_BOOKS.length) {
+            books = json.data.books;
+          }
           renderAll();
           updateSyncBadge('ok');
         }
@@ -413,33 +689,38 @@
       renderPopupBanner();
       renderOverdue();
       renderStats();
+      renderNotes();
       renderCalendar();
     }
 
     function renderPopupBanner() {
       const todayISO = formatDateISO(new Date());
-      const todayDue = assignments.filter(a => !a.completed && a.dueDate === todayISO);
+      const urgentTasks = assignments.filter(a => a.type !== 'note' && !a.completed && a.dueDate <= todayISO);
       const banner = document.getElementById('livePopupBanner');
-      const textEl = document.getElementById('livePopupText');
-
-      if (todayDue.length > 0) {
+      if (urgentTasks.length > 0 && !popupShownThisSession) {
         banner.classList.remove('hidden');
-        textEl.textContent = `Bugün kontrol edilecek ${todayDue.length} adet görev/ödev var! Lütfen zamanında tamamlayın.`;
-      } else {
-        banner.classList.add('hidden');
+        banner.classList.add('flex', 'popup-animate');
+        document.getElementById('livePopupText').textContent = `Teslim günü gelmiş veya bekleyen ${urgentTasks.length} adet görev/sınav bulunuyor!`;
       }
+    }
+
+    function closePopupBanner() {
+      document.getElementById('livePopupBanner').classList.add('hidden');
+      document.getElementById('livePopupBanner').classList.remove('flex', 'popup-animate');
+      popupShownThisSession = true;
     }
 
     function renderStats() {
       const todayISO = formatDateISO(new Date());
       let pending = 0, done = 0, todayControl = 0;
 
-      assignments.forEach(a => {
+      const tasks = assignments.filter(a => a.type !== 'note');
+      tasks.forEach(a => {
         if (a.completed) done++; else pending++;
-        if (a.dueDate === todayISO) todayControl++;
+        if (a.dueDate === todayISO && !a.completed) todayControl++;
       });
 
-      const total = assignments.length;
+      const total = tasks.length;
       const percent = total > 0 ? Math.round((done / total) * 100) : 0;
 
       document.getElementById('statPendingCount').textContent = pending;
@@ -451,7 +732,7 @@
 
     function renderOverdue() {
       const todayISO = formatDateISO(new Date());
-      const overdueItems = assignments.filter(a => !a.completed && a.dueDate < todayISO);
+      const overdueItems = assignments.filter(a => a.type !== 'note' && !a.completed && a.dueDate < todayISO);
       const sec = document.getElementById('overdueSection');
       const list = document.getElementById('overdueList');
       document.getElementById('overdueCountBadge').textContent = overdueItems.length;
@@ -475,37 +756,196 @@
               ${a.teacherNote ? `<div class="text-[11px] text-indigo-700 italic mt-1">📌 ${a.teacherNote}</div>` : ''}
             </div>
             <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-              <button onclick="toggleComplete('${a.id}')" class="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[11px] font-bold hover:bg-emerald-700">✓ Tamamlandı Yap</button>
-              <button onclick="editHomework('${a.id}')" class="px-2 py-1 text-indigo-600 text-xs">Düzenle</button>
-              <button onclick="deleteHomework('${a.id}')" class="px-2 py-1 text-slate-400 hover:text-rose-600 text-xs">Sil</button>
+              <button onclick="toggleComplete('${a.id}')" class="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[11px] font-bold hover:bg-emerald-700">✓ Tamamlandı</button>
+              <button onclick="editHomework('${a.id}')" class="px-2 py-1 text-indigo-600 text-xs font-semibold">Düzenle</button>
+              <button onclick="deleteHomework('${a.id}')" class="px-2 py-1 text-slate-400 hover:text-rose-600 text-xs font-semibold">Sil</button>
             </div>
           </div>
         `;
       }).join('');
     }
 
-    function renderCalendar() {
-      const grid = document.getElementById('calendarGrid');
-      const dayNames = ['PAZARTESİ', 'SALI', 'ÇARŞAMBA', 'PERŞEMBE', 'CUMA'];
+    function openStatsModal(type) {
+      const modal = document.getElementById('statsModal');
+      const container = document.getElementById('statsListContainer');
+      const title = document.getElementById('statsModalTitle');
       const todayISO = formatDateISO(new Date());
 
-      const friday = new Date(currentMonday);
-      friday.setDate(friday.getDate() + 4);
-      document.getElementById('weekRangeLabel').textContent =
-        `${formatShortDate(formatDateISO(currentMonday))} - ${formatShortDate(formatDateISO(friday))} ${friday.getFullYear()}`;
+      let filtered = [];
+      if (type === 'pending') {
+          filtered = assignments.filter(a => a.type !== 'note' && !a.completed);
+          title.textContent = 'Devam Eden Görevler (Kaynaklara Göre)';
+      } else if (type === 'done') {
+          filtered = assignments.filter(a => a.type !== 'note' && a.completed);
+          title.textContent = 'Tamamlanan Görevler';
+      } else if (type === 'today') {
+          filtered = assignments.filter(a => a.type !== 'note' && a.dueDate === todayISO && !a.completed);
+          title.textContent = 'Bugün Kontrol Edilecekler';
+      }
 
-      const fSubj = document.getElementById('filterSubject').value;
-      const fStatus = document.getElementById('filterStatus').value;
+      const grouped = {};
+      filtered.forEach(a => {
+          if(!grouped[a.book]) grouped[a.book] = [];
+          grouped[a.book].push(a);
+      });
 
       let html = '';
-      for (let i = 0; i < 5; i++) {
-        const d = new Date(currentMonday);
-        d.setDate(d.getDate() + i);
-        const iso = formatDateISO(d);
-        const isToday = iso === todayISO;
-        const daySchedule = WEEKLY_TIMETABLE[i + 1] || [];
+      for(const [book, tasks] of Object.entries(grouped)) {
+          html += `<div class="mb-4 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <h4 class="font-extrabold text-indigo-900 text-xs mb-2 border-b border-indigo-100 pb-1.5">📚 ${book}</h4>
+                    <div class="space-y-2">`;
+          tasks.forEach(t => {
+              const subj = SUBJECTS[t.subject] || { badge: 'bg-slate-200 text-slate-700' };
+              const prog = t.progress || 0;
+              html += `
+                  <div class="flex items-center justify-between bg-white p-2 rounded-lg border border-slate-100 shadow-sm">
+                      <div class="flex items-center gap-2 w-3/4">
+                          <span class="text-[9px] px-1.5 py-0.5 rounded-md whitespace-nowrap ${subj.badge}">${subj.name}</span>
+                          <span class="text-[11px] font-semibold text-slate-700 truncate ${t.completed ? 'line-through opacity-60' : ''}" title="${t.description}">${t.description}</span>
+                      </div>
+                      <div class="flex flex-col items-end w-1/4">
+                        <span class="text-[10px] font-bold ${t.completed ? 'text-emerald-600' : 'text-indigo-600'}">${t.completed ? 'Bitti' : '%'+prog}</span>
+                        <span class="text-[8px] text-slate-400">Teslim: ${formatShortDate(t.dueDate)}</span>
+                      </div>
+                  </div>
+              `;
+          });
+          html += `</div></div>`;
+      }
 
-        let dayTasks = assignments.filter(a => a.assignedDate <= iso && a.dueDate >= iso);
+      if (filtered.length === 0) {
+          html = '<div class="text-center text-slate-400 py-10 text-xs font-medium">Bu kategoride görev bulunmuyor.</div>';
+      }
+
+      container.innerHTML = html;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeStatsModal() {
+        document.getElementById('statsModal').classList.add('hidden');
+        document.getElementById('statsModal').classList.remove('flex');
+    }
+
+    function renderNotes() {
+      const filter = document.getElementById('filterNoteStatus').value;
+      let notes = assignments.filter(a => a.type === 'note');
+      if (filter === 'PENDING') notes = notes.filter(n => !n.completed);
+      if (filter === 'DONE') notes = notes.filter(n => n.completed);
+
+      const container = document.getElementById('quickNotesList');
+      if (notes.length === 0) {
+        container.innerHTML = `<div class="text-xs text-slate-400 italic col-span-full">Bu filtreye uygun not bulunamadı.</div>`;
+        return;
+      }
+      container.innerHTML = notes.map(n => `
+        <div class="bg-amber-50 border ${n.completed ? 'border-amber-200/50 opacity-60' : 'border-amber-300'} p-2.5 rounded-xl shadow-2xs relative flex items-start gap-2">
+          <input type="checkbox" ${n.completed ? 'checked' : ''} onchange="toggleComplete('${n.id}')" class="mt-0.5 cursor-pointer w-4 h-4 text-amber-600 rounded border-amber-300 shrink-0" />
+          <div class="flex-1 min-w-0">
+            <div class="text-xs font-semibold ${n.completed ? 'line-through text-amber-700/60' : 'text-amber-950'} leading-snug break-words">${n.description}</div>
+            <div class="text-[10px] text-amber-700 mt-1.5 flex justify-between items-center">
+              <span>${formatShortDate(n.assignedDate)}</span>
+              <div>
+                <button onclick="editNote('${n.id}')" class="hover:text-indigo-600 font-bold text-slate-400 mr-2">✎</button>
+                <button onclick="deleteHomework('${n.id}')" class="hover:text-rose-600 font-bold text-slate-400">Sil</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function addQuickNote() {
+      const noteText = prompt("Kısa not veya hatırlatma yazın:\n(Örn: Yarın fen sözlüsü var)");
+      if (noteText && noteText.trim() !== '') {
+        assignments.push({ id: 'note_' + Date.now(), type: 'note', description: noteText.trim(), assignedDate: formatDateISO(new Date()), completed: false });
+        persistData();
+      }
+    }
+
+    function editNote(id) {
+      const note = assignments.find(a => a.id === id);
+      if (!note) return;
+      const newText = prompt("Notu düzenle:", note.description);
+      if (newText !== null && newText.trim() !== '') {
+        note.description = newText.trim();
+        persistData();
+      }
+    }
+
+    function updateProgress(id, val) {
+      const item = assignments.find(a => a.id === id);
+      if (item) { item.progress = parseInt(val); persistData(); }
+    }
+
+    function changeView(view) {
+      currentView = view;
+      document.querySelectorAll('.view-btn-active').forEach(el => { el.classList.remove('view-btn-active', 'bg-indigo-600', 'text-white'); el.classList.add('text-slate-600'); });
+      const btn = view === 'daily' ? 'btnViewDaily' : view === 'weekly' ? 'btnViewWeekly' : 'btnViewMonthly';
+      const activeBtn = document.getElementById(btn);
+      if (activeBtn) { activeBtn.classList.remove('text-slate-600'); activeBtn.classList.add('view-btn-active'); }
+      renderCalendar();
+    }
+
+    function changeDate(dir) {
+      if (currentView === 'daily') targetDate.setDate(targetDate.getDate() + dir);
+      else if (currentView === 'weekly') currentMonday.setDate(currentMonday.getDate() + (dir * 7));
+      else if (currentView === 'monthly') targetDate.setMonth(targetDate.getMonth() + dir);
+      renderCalendar();
+    }
+
+    function goToday() {
+      targetDate = new Date();
+      currentMonday = getMonday(new Date());
+      renderCalendar();
+    }
+
+    function generateTaskHTML(a, iso) {
+      const subj = SUBJECTS[a.subject] || { name: a.subject, color: 'border-slate-400 bg-slate-50', badge: 'bg-slate-200', bookBadge: 'bg-slate-200' };
+      const isDueDay = a.dueDate === iso;
+      const prog = a.progress || 0;
+      
+      return `
+        <div class="border-l-4 rounded-xl p-3 transition shadow-2xs mb-2.5 ${subj.color} ${a.completed ? 'completed-card' : ''}">
+          <div class="flex items-start justify-between gap-1">
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" ${a.completed ? 'checked' : ''} onchange="toggleComplete('${a.id}')" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500" />
+              <span class="text-[11px] font-extrabold px-2 py-0.5 rounded ${subj.badge}">${subj.name}</span>
+            </label>
+            <div class="flex items-center gap-1">
+              ${isDueDay ? `<span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-rose-600 text-white animate-pulse">Teslim Günü!</span>` : `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">Devam Ediyor</span>`}
+              ${!a.isReading ? `<button onclick="editHomework('${a.id}')" class="text-slate-400 hover:text-indigo-600 text-xs px-1" title="Düzenle">✏️</button><button onclick="deleteHomework('${a.id}')" class="text-slate-400 hover:text-rose-600 text-xs px-1" title="Sil">✕</button>` : ''}
+            </div>
+          </div>
+
+          <div class="mt-2">
+            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${subj.bookBadge}">${a.book}</span>
+          </div>
+
+          <div class="mt-1 text-xs font-bold ${a.completed ? 'completed-text' : 'text-slate-900'}">${a.description}</div>
+          
+          ${a.teacherNote ? `<div class="mt-1.5 text-[11px] text-indigo-800 font-medium bg-indigo-50/80 p-1.5 rounded-lg border border-indigo-100">📌 ${a.teacherNote}</div>` : ''}
+
+          <div class="mt-2 pt-1.5 border-t border-black/5 flex items-center justify-between text-[10px] text-slate-500 font-medium">
+            <span>Veriliş: ${formatShortDate(a.assignedDate)}</span>
+            <span class="font-bold">Kontrol: ${formatShortDate(a.dueDate)}</span>
+          </div>
+
+          <div class="mt-2 flex items-center gap-2 bg-white/60 p-1.5 rounded-lg border border-black/5">
+            <span class="text-[9px] font-bold text-slate-400 uppercase">İlerleme</span>
+            <input type="range" min="0" max="100" value="${prog}" oninput="document.getElementById('progText_${a.id}').textContent = '%'+this.value" onchange="updateProgress('${a.id}', this.value)" class="flex-1" ${a.completed ? 'disabled' : ''}>
+            <span id="progText_${a.id}" class="text-[10px] font-bold text-indigo-600 w-8 text-right">%${prog}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCalendar() {
+      const grid = document.getElementById('calendarGrid');
+      const todayISO = formatDateISO(new Date());
+
+      const filterTasks = (iso) => {
+        let dayTasks = assignments.filter(a => a.type !== 'note' && a.assignedDate <= iso && a.dueDate >= iso);
 
         readingList.forEach(r => {
           if (iso >= r.start && iso <= r.end) {
@@ -517,7 +957,7 @@
                 book: '📖 7/K Türkçe Kitap Okuma Listesi',
                 assignedDate: r.start,
                 dueDate: r.end,
-                description: r.title + ' (' + r.range + ') okunuyor, özeti hazırlanacak.',
+                description: r.title + ' (' + r.range + ') okunuyor, özet hazırlanacak.',
                 teacherNote: 'Azize hoca sınav/özet kontrolü yapacak.',
                 completed: false,
                 isReading: true
@@ -526,64 +966,109 @@
           }
         });
 
-        if (fSubj !== 'ALL') dayTasks = dayTasks.filter(a => a.subject === fSubj);
-        if (fStatus === 'PENDING') dayTasks = dayTasks.filter(a => !a.completed);
-        if (fStatus === 'DONE') dayTasks = dayTasks.filter(a => a.completed);
+        if (activeSubjectFilter !== 'ALL') dayTasks = dayTasks.filter(a => a.subject === activeSubjectFilter);
+        if (activeStatusFilter === 'PENDING') dayTasks = dayTasks.filter(a => !a.completed);
+        if (activeStatusFilter === 'DONE') dayTasks = dayTasks.filter(a => a.completed);
+        return dayTasks;
+      };
 
-        html += `
-          <div class="bg-white rounded-2xl border ${isToday ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-slate-200'} flex flex-col overflow-hidden shadow-xs">
-            <div class="p-3 border-b ${isToday ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-800'}">
-              <div class="flex items-center justify-between">
-                <span class="font-extrabold text-sm">${dayNames[i]}</span>
-                <div class="flex items-center gap-1">
-                  ${isToday ? `<span class="text-[10px] font-extrabold bg-white text-indigo-700 px-1.5 py-0.5 rounded">BUGÜN</span>` : ''}
-                  <span class="text-xs font-bold opacity-85">${formatShortDate(iso)}</span>
-                </div>
-              </div>
-              <div class="text-[11px] font-semibold mt-2 opacity-75">O GÜNÜN DERSLERİ:</div>
-              <div class="flex flex-wrap gap-1 mt-1">
-                ${daySchedule.map(s => `<span class="text-[10px] px-1.5 py-0.5 rounded ${isToday ? 'bg-indigo-500 text-white' : 'bg-slate-200/80 text-slate-700'} font-semibold">${s.split(' ')[0]}</span>`).join('')}
-              </div>
+      if (currentView === 'daily') {
+        const iso = formatDateISO(targetDate);
+        document.getElementById('dateRangeLabel').textContent = formatShortDate(iso) + ' ' + targetDate.getFullYear();
+        const tasks = filterTasks(iso);
+        grid.className = "max-w-xl mx-auto";
+        grid.innerHTML = `
+          <div class="bg-white rounded-2xl border ${iso === todayISO ? 'border-indigo-500 shadow-md' : 'border-slate-200 shadow-sm'} overflow-hidden">
+            <div class="p-3.5 border-b ${iso === todayISO ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-800'} flex justify-between items-center">
+              <h2 class="text-sm font-bold">${['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'][targetDate.getDay()]}</h2>
+              <span class="text-xs font-semibold">${formatShortDate(iso)}</span>
             </div>
-
-            <div class="p-3 space-y-3 flex-1">
-              ${dayTasks.length === 0 ? `<div class="text-center py-10 text-xs text-slate-400">Görev yok</div>` : dayTasks.map(a => {
-                const subj = SUBJECTS[a.subject] || { name: a.subject, color: 'border-slate-400 bg-slate-50', badge: 'bg-slate-200', bookBadge: 'bg-slate-200' };
-                const isDueDay = a.dueDate === iso;
-                return `
-                  <div class="border-l-4 rounded-xl p-3 transition shadow-2xs ${subj.color} ${a.completed ? 'completed-card' : ''}">
-                    <div class="flex items-start justify-between gap-1">
-                      <label class="flex items-center gap-2 cursor-pointer select-none">
-                        <input type="checkbox" ${a.completed ? 'checked' : ''} onchange="toggleComplete('${a.id}')" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500" />
-                        <span class="text-[11px] font-extrabold px-2 py-0.5 rounded ${subj.badge}">${subj.name}</span>
-                      </label>
-                      <div class="flex items-center gap-1">
-                        ${isDueDay ? `<span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-rose-600 text-white">Teslim Günü!</span>` : `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">Devam Ediyor</span>`}
-                        ${!a.isReading ? `<button onclick="editHomework('${a.id}')" class="text-slate-400 hover:text-indigo-600 text-xs px-1" title="Düzenle">✏️</button><button onclick="deleteHomework('${a.id}')" class="text-slate-400 hover:text-rose-600 text-xs px-1" title="Sil">✕</button>` : ''}
-                      </div>
-                    </div>
-
-                    <div class="mt-2">
-                      <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${subj.bookBadge}">${a.book}</span>
-                    </div>
-
-                    <div class="mt-1 text-xs font-bold ${a.completed ? 'completed-text' : 'text-slate-900'}">${a.description}</div>
-                    
-                    ${a.teacherNote ? `<div class="mt-1.5 text-[11px] text-indigo-800 font-medium bg-indigo-50/80 p-1.5 rounded-lg border border-indigo-100">📌 ${a.teacherNote}</div>` : ''}
-
-                    <div class="mt-2 pt-1.5 border-t border-black/5 flex items-center justify-between text-[10px] text-slate-500 font-medium">
-                      <span>Veriliş: ${formatShortDate(a.assignedDate)}</span>
-                      <span class="font-bold">Kontrol: ${formatShortDate(a.dueDate)}</span>
-                    </div>
-                  </div>
-                `;
-              }).join('')}
+            <div class="p-3.5 bg-slate-50/50 min-h-[300px]">
+              ${tasks.length === 0 ? `<div class="text-center py-20 text-slate-400 font-medium text-xs">Bu güne ait görev bulunmuyor.</div>` : tasks.map(a => generateTaskHTML(a, iso)).join('')}
             </div>
           </div>
         `;
-      }
+      } 
+      else if (currentView === 'weekly') {
+        grid.className = "grid grid-cols-1 md:grid-cols-5 gap-4 print-grid";
+        const dayNames = ['PAZARTESİ', 'SALI', 'ÇARŞAMBA', 'PERŞEMBE', 'CUMA'];
+        const friday = new Date(currentMonday);
+        friday.setDate(friday.getDate() + 4);
+        document.getElementById('dateRangeLabel').textContent =
+          `${formatShortDate(formatDateISO(currentMonday))} - ${formatShortDate(formatDateISO(friday))} ${friday.getFullYear()}`;
 
-      grid.innerHTML = html;
+        let html = '';
+        for (let i = 0; i < 5; i++) {
+          const d = new Date(currentMonday);
+          d.setDate(d.getDate() + i);
+          const iso = formatDateISO(d);
+          const isToday = iso === todayISO;
+          const daySchedule = WEEKLY_TIMETABLE[i + 1] || [];
+          const dayTasks = filterTasks(iso);
+
+          html += `
+            <div class="bg-white rounded-2xl border ${isToday ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-slate-200'} flex flex-col overflow-hidden shadow-xs">
+              <div class="p-3 border-b ${isToday ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-800'}">
+                <div class="flex items-center justify-between">
+                  <span class="font-extrabold text-sm">${dayNames[i]}</span>
+                  <div class="flex items-center gap-1">
+                    ${isToday ? `<span class="text-[10px] font-extrabold bg-white text-indigo-700 px-1.5 py-0.5 rounded">BUGÜN</span>` : ''}
+                    <span class="text-xs font-bold opacity-85">${formatShortDate(iso)}</span>
+                  </div>
+                </div>
+                <div class="text-[11px] font-semibold mt-2 opacity-75">O GÜNÜN DERSLERİ:</div>
+                <div class="flex flex-wrap gap-1 mt-1">
+                  ${daySchedule.map(s => `<span class="text-[10px] px-1.5 py-0.5 rounded ${isToday ? 'bg-indigo-500 text-white' : 'bg-slate-200/80 text-slate-700'} font-semibold">${s.split(' ')[0]}</span>`).join('')}
+                </div>
+              </div>
+
+              <div class="p-3 space-y-3 flex-1 bg-slate-50/30">
+                ${dayTasks.length === 0 ? `<div class="text-center py-10 text-xs text-slate-400">Görev yok</div>` : dayTasks.map(a => generateTaskHTML(a, iso)).join('')}
+              </div>
+            </div>
+          `;
+        }
+        grid.innerHTML = html;
+      }
+      else if (currentView === 'monthly') {
+        grid.className = "bg-white rounded-2xl border border-slate-200 shadow-sm p-4 max-w-3xl mx-auto";
+        const year = targetDate.getFullYear();
+        const month = targetDate.getMonth();
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        
+        const monthNames = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+        document.getElementById('dateRangeLabel').textContent = `${monthNames[month]} ${year}`;
+
+        let html = `<div class="grid grid-cols-7 gap-1.5 text-center mb-2">`;
+        ['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'].forEach(d => html += `<div class="text-[11px] font-extrabold text-slate-400 uppercase">${d}</div>`);
+        html += `</div><div class="grid grid-cols-7 gap-1.5">`;
+
+        let emptyDays = firstDay === 0 ? 6 : firstDay - 1;
+        for(let i=0; i<emptyDays; i++) html += `<div></div>`;
+
+        for(let day=1; day<=daysInMonth; day++) {
+          const d = new Date(year, month, day);
+          const iso = formatDateISO(d);
+          const isToday = iso === todayISO;
+          const tasks = filterTasks(iso);
+          
+          let indicators = '';
+          if(tasks.length > 0) {
+            const pending = tasks.filter(t => !t.completed).length;
+            indicators = pending > 0 ? `<div class="w-2 h-2 rounded-full bg-rose-500 mx-auto mt-1"></div>` : `<div class="w-2 h-2 rounded-full bg-emerald-500 mx-auto mt-1"></div>`;
+          }
+
+          html += `
+            <div onclick="targetDate = new Date('${iso}'); changeView('daily');" class="aspect-square p-1.5 border rounded-xl flex flex-col items-center justify-center cursor-pointer transition ${isToday ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-slate-50 border-slate-100 hover:border-indigo-300 hover:bg-indigo-50 text-slate-700'}">
+              <span class="text-xs font-bold">${day}</span>
+              ${indicators}
+            </div>
+          `;
+        }
+        html += `</div>`;
+        grid.innerHTML = html;
+      }
     }
 
     function populateSubjSelects() {
@@ -692,7 +1177,8 @@
         assignments.push({
           id: 'hw_' + Date.now(),
           ...homeworkData,
-          completed: false
+          completed: false,
+          progress: 0
         });
       }
 
@@ -702,11 +1188,11 @@
 
     function toggleComplete(id) {
       if (id.startsWith('read_')) {
-        const realId = id.replace('read_', '');
         let item = assignments.find(a => a.id === id);
         if (item) {
           item.completed = !item.completed;
         } else {
+          const realId = id.replace('read_', '');
           const r = readingList.find(x => x.id === realId);
           assignments.push({
             id: id,
@@ -715,18 +1201,22 @@
             assignedDate: r.start,
             dueDate: r.end,
             description: r.title,
-            completed: true
+            completed: true,
+            progress: 100
           });
         }
       } else {
         const item = assignments.find(a => a.id === id);
-        if (item) item.completed = !item.completed;
+        if (item) {
+          item.completed = !item.completed;
+          if (item.completed && item.type !== 'note') item.progress = 100;
+        }
       }
       persistData();
     }
 
     function deleteHomework(id) {
-      if (!confirm('Bu görevi silmek istediğinize emin misiniz?')) return;
+      if (!confirm('Bu kaydı silmek istediğinize emin misiniz?')) return;
       assignments = assignments.filter(a => a.id !== id);
       persistData();
     }
@@ -734,6 +1224,7 @@
     // KİTAPLIK YÖNETİMİ
     function openBooksModal() {
       populateSubjSelects();
+      resetBookForm();
       renderBooksList();
       document.getElementById('booksModal').classList.remove('hidden');
       document.getElementById('booksModal').classList.add('flex');
@@ -751,21 +1242,52 @@
               <span class="font-bold px-2 py-0.5 rounded ${s.badge}">${s.name}</span>
               <span class="font-semibold text-slate-800">${b.title}</span>
             </div>
-            <button onclick="deleteBook('${b.id}')" class="text-rose-500 hover:text-rose-700 font-bold px-2">Sil</button>
+            <div class="flex items-center gap-1">
+              <button onclick="editBook('${b.id}')" class="text-indigo-600 hover:text-indigo-800 font-bold px-2">Düzenle</button>
+              <button onclick="deleteBook('${b.id}')" class="text-rose-500 hover:text-rose-700 font-bold px-2">Sil</button>
+            </div>
           </div>
         `;
       }).join('');
     }
-    function addNewBook(e) {
+    function saveBookForm(e) {
       e.preventDefault();
-      books.push({
-        id: 'b_' + Date.now(),
-        subject: document.getElementById('newBookSubject').value,
-        title: document.getElementById('newBookTitle').value.trim()
-      });
-      document.getElementById('newBookTitle').value = '';
+      const editingId = document.getElementById('editingBookId').value;
+      const subject = document.getElementById('newBookSubject').value;
+      const title = document.getElementById('newBookTitle').value.trim();
+
+      if (editingId) {
+        const book = books.find(b => b.id === editingId);
+        if (book) {
+          book.subject = subject;
+          book.title = title;
+        }
+      } else {
+        books.push({
+          id: 'b_' + Date.now(),
+          subject: subject,
+          title: title
+        });
+      }
+
+      resetBookForm();
       renderBooksList();
       persistData();
+    }
+    function editBook(id) {
+      const book = books.find(b => b.id === id);
+      if (!book) return;
+      document.getElementById('editingBookId').value = book.id;
+      document.getElementById('newBookSubject').value = book.subject;
+      document.getElementById('newBookTitle').value = book.title;
+      document.getElementById('bookSubmitBtn').textContent = 'Kitabı Güncelle';
+      document.getElementById('bookSubmitBtn').className = 'bg-amber-600 text-white font-bold text-xs rounded-lg px-3 py-2 hover:bg-amber-700';
+    }
+    function resetBookForm() {
+      document.getElementById('editingBookId').value = '';
+      document.getElementById('newBookTitle').value = '';
+      document.getElementById('bookSubmitBtn').textContent = '+ Kitap Ekle';
+      document.getElementById('bookSubmitBtn').className = 'bg-indigo-600 text-white font-bold text-xs rounded-lg px-3 py-2 hover:bg-indigo-700';
     }
     function deleteBook(id) {
       books = books.filter(b => b.id !== id);
@@ -816,17 +1338,16 @@
       persistData();
     }
 
-    function changeWeek(dir) {
-      currentMonday.setDate(currentMonday.getDate() + dir * 7);
-      renderCalendar();
-    }
-    function goToday() {
-      currentMonday = getMonday(new Date());
-      renderCalendar();
-    }
-
-    // Başlangıç
+    // Başlangıç ve Saat Başlatma
+    initClockAndTimer();
     syncFromCloud(true);
+    
+    
+
+    
   </script>
+  
+
+  
 </body>
 </html>
