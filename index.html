@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>7-K Ödev & Kaynak Takip Takvimi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
+    .completed-card { opacity: 0.65; background-color: #f1f5f9 !important; }
+    .completed-text { text-decoration: line-through; color: #64748b; }
+    @keyframes popupBounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
+    }
+    .popup-alert { animation: popupBounce 2s infinite ease-in-out; }
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white !important; }
+      .print-grid { display: grid !important; grid-template-columns: repeat(5, 1fr) !important; gap: 8px !important; }
+    }
+  </style>
+</head>
+<body class="text-slate-800 min-h-screen pb-12">
+
+  <!-- ÜST BAR -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm no-print">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-extrabold text-lg shadow">7-K</div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-bold text-slate-900 text-base sm:text-lg leading-tight">Lütfi Ege O.O. • 7-K Takip</h1>
+            <span class="text-[11px] font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-lg border border-indigo-200">Sınıf Öğr: Arzu Ataman</span>
+          </div>
+          <div class="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+            <span>Okul, Özel Ders & Kitap Okuma Entegre Takvimi</span>
+            <span>•</span>
+            <span id="syncStatusBadge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium">
+              <span class="w-2 h-2 rounded-full bg-slate-400" id="syncDot"></span>
+              <span id="syncText">Buluta Bağlanıyor...</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 flex-wrap">
+        <button onclick="toggleKioskMode()" id="btnKiosk" class="px-3 py-2 text-xs font-bold rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition">
+          📺 Tam Ekran
+        </button>
+        <button onclick="syncFromCloud(true)" class="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition">
+          🔄 Eşitle
+        </button>
+        <button onclick="openBooksModal()" class="px-3 py-2 text-xs font-semibold rounded-xl bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 transition">
+          📚 Kitaplık (<span id="bookCountBadge">0</span>)
+        </button>
+        <button onclick="openReadingModal()" class="px-3 py-2 text-xs font-semibold rounded-xl bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200 transition">
+          📖 Okuma Listesi (<span id="readingCountBadge">0</span>)
+        </button>
+        <button onclick="window.print()" class="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition">
+          🖨️ Yazdır
+        </button>
+        <button onclick="openAddModal()" class="px-4 py-2 text-xs sm:text-sm font-bold rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm transition">
+          + Ödev / Görev Ekle
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 mt-5 space-y-5">
+
+    <!-- CANLI POP-UP HATIRLATMA BİLDİRİM ÇUBUĞU -->
+    <div id="livePopupBanner" class="hidden bg-gradient-to-r from-amber-500 to-rose-600 text-white p-4 rounded-2xl shadow-md popup-alert flex items-center justify-between flex-wrap gap-3 no-print">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">🔔</span>
+        <div>
+          <div class="font-extrabold text-sm sm:text-base">Öğrenci Hatırlatması / Bugün Teslim Edilecek Görevler Var!</div>
+          <div id="livePopupText" class="text-xs text-amber-100 font-medium">Lütfen aşağıdaki kontrol günü gelen ödevleri tamamlayın.</div>
+        </div>
+      </div>
+      <button onclick="document.getElementById('livePopupBanner').style.display='none'" class="bg-white/20 hover:bg-white/30 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition">
+        Bildirimi Kapat
+      </button>
+    </div>
+
+    <!-- KONTROL GÜNÜ GEÇMİŞ / BEKLEYEN ÖDEVLER ACİL PANELİ -->
+    <section id="overdueSection" class="hidden bg-rose-50 border-2 border-rose-300 rounded-2xl p-4 shadow-sm no-print">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-rose-600 text-xl animate-pulse">⚠️</span>
+          <h2 class="font-extrabold text-rose-900 text-sm sm:text-base">Kontrol Günü Geçmiş / Bekleyen Görevler <span id="overdueCountBadge" class="ml-1 px-2 py-0.5 text-xs bg-rose-600 text-white rounded-full">0</span></h2>
+        </div>
+        <span class="text-xs font-bold text-rose-700">Öğretmen kontrolü öncesi tamamlanmalı!</span>
+      </div>
+      <div id="overdueList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+    </section>
+
+    <!-- İSTATİSTİK ÖZET KUTULARI -->
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+      <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+        <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">🕒</div>
+        <div>
+          <div class="text-xs text-slate-500 font-semibold">Devam Eden</div>
+          <div id="statPendingCount" class="text-lg font-extrabold text-slate-900">0</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+        <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">✅</div>
+        <div>
+          <div class="text-xs text-slate-500 font-semibold">Tamamlanan</div>
+          <div id="statDoneCount" class="text-lg font-extrabold text-emerald-600">0</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+        <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold">📌</div>
+        <div>
+          <div class="text-xs text-slate-500 font-semibold">Bugün Kontrol</div>
+          <div id="statTodayCheck" class="text-lg font-extrabold text-rose-600">0</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+        <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">📊</div>
+        <div class="flex-1">
+          <div class="flex justify-between text-xs text-slate-500 font-semibold">
+            <span>Tamamlama</span>
+            <span id="statPercentText">0%</span>
+          </div>
+          <div class="w-full bg-slate-200 h-2 rounded-full mt-1 overflow-hidden">
+            <div id="statProgressBar" class="bg-indigo-600 h-full transition-all duration-500" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HAFTA SEÇİCİ VE FİLTRELER -->
+    <div class="flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm">
+      <div class="flex items-center gap-2">
+        <button onclick="changeWeek(-1)" class="p-2 rounded-xl hover:bg-slate-100 text-slate-600 font-bold no-print">◀ Önceki</button>
+        <button onclick="goToday()" class="px-3 py-1.5 text-xs font-bold bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 no-print">Bu Hafta</button>
+        <button onclick="changeWeek(1)" class="p-2 rounded-xl hover:bg-slate-100 text-slate-600 font-bold no-print">Sonraki ▶</button>
+        <span id="weekRangeLabel" class="font-bold text-slate-800 text-sm sm:text-base ml-2"></span>
+      </div>
+
+      <div class="flex items-center gap-2 flex-wrap">
+        <select id="filterSubject" onchange="renderCalendar()" class="text-xs font-semibold rounded-xl border border-slate-300 px-3 py-2 bg-white outline-none">
+          <option value="ALL">Tüm Dersler ve Görevler</option>
+          <option value="MAT6">Matematik (Okul)</option>
+          <option value="FEN6">Fen Bilimleri (Okul)</option>
+          <option value="TRK7">Türkçe (Okul)</option>
+          <option value="SOS6">Sosyal Bilgiler</option>
+          <option value="YD7">Yabancı Dil (İngilizce)</option>
+          <option value="DIN6">Din Kültürü ve Ahlak B.</option>
+          <option value="OZEL_MAT">Özel Ders - Matematik</option>
+          <option value="OZEL_FEN">Özel Ders - Fen Bilimleri</option>
+          <option value="OZEL_TRK">Özel Ders - Türkçe</option>
+          <option value="KİTAP">Kitap Okuma Görevi</option>
+        </select>
+        <select id="filterStatus" onchange="renderCalendar()" class="text-xs font-semibold rounded-xl border border-slate-300 px-3 py-2 bg-white outline-none">
+          <option value="ALL">Tümü (Yapıldı & Bekleyen)</option>
+          <option value="PENDING">Sadece Bekleyenler</option>
+          <option value="DONE">Sadece Tamamlananlar</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- HAFTALIK 5 GÜNLÜK TAKVİM SÜTUNLARI -->
+    <section id="calendarGrid" class="grid grid-cols-1 md:grid-cols-5 gap-4 print-grid"></section>
+
+  </main>
+
+  <!-- ÖDEV EKLEME / DÜZENLEME MODALI -->
+  <div id="addModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs hidden items-center justify-center z-50 p-4 no-print">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 id="modalTitle" class="font-extrabold text-lg text-slate-900">Yeni Ödev / Görev Kaydı</h3>
+        <button onclick="closeAddModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">✕</button>
+      </div>
+
+      <form id="homeworkForm" onsubmit="saveHomework(event)" class="space-y-4">
+        <input type="hidden" id="editingId" value="" />
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Ders / Kategori Seçin</label>
+          <select id="hwSubject" onchange="onSubjectChange()" required class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none"></select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Kaynak / Kitap Seçin</label>
+          <select id="hwBook" required class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none"></select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Veriliş Tarihi</label>
+            <input type="date" id="hwAssignedDate" onchange="suggestNextClassDate()" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Teslim / Kontrol Tarihi</label>
+            <input type="date" id="hwDueDate" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+          </div>
+        </div>
+
+        <div id="smartDateSuggestion" class="text-xs bg-indigo-50 text-indigo-800 p-2.5 rounded-xl flex items-center justify-between flex-wrap gap-2"></div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Sayfa / Test / Görev Açıklaması</label>
+          <input type="text" id="hwDescription" placeholder="Örn: Sayfa 42-45 arası testler çözülecek" required class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Öğretmen / Özel Ders Notu (Opsiyonel)</label>
+          <input type="text" id="hwTeacherNote" placeholder="Örn: Özel ders hocasıyla birlikte çözülecek" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm" />
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2 border-t">
+          <button type="button" onclick="closeAddModal()" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100">İptal</button>
+          <button type="submit" id="saveButtonText" class="px-5 py-2 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700">Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- KİTAPLIK MODALI -->
+  <div id="booksModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs hidden items-center justify-center z-50 p-4 no-print">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="font-extrabold text-lg text-slate-900">📚 Kaynak ve Ders Kitaplığı Yönetimi</h3>
+        <button onclick="closeBooksModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">✕</button>
+      </div>
+
+      <form onsubmit="addNewBook(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-slate-50 p-3 rounded-xl border">
+        <select id="newBookSubject" required class="rounded-lg border border-slate-300 px-2.5 py-2 text-xs font-semibold"></select>
+        <input type="text" id="newBookTitle" placeholder="Yayınevi ve Kitap Adı" required class="rounded-lg border border-slate-300 px-2.5 py-2 text-xs" />
+        <button type="submit" class="bg-indigo-600 text-white font-bold text-xs rounded-lg px-3 py-2 hover:bg-indigo-700">+ Kitap Ekle</button>
+      </form>
+
+      <div id="booksListContainer" class="space-y-2 max-h-96 overflow-y-auto"></div>
+    </div>
+  </div>
+
+  <!-- OKUMA LİSTESİ MODALI -->
+  <div id="readingModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs hidden items-center justify-center z-50 p-4 no-print">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="font-extrabold text-lg text-slate-900">📖 Türkçe Kitap Okuma Listesi (7/K)</h3>
+        <button onclick="closeReadingModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">✕</button>
+      </div>
+
+      <form onsubmit="addNewReadingBook(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-2 bg-purple-50 p-3 rounded-xl border border-purple-200">
+        <input type="text" id="newReadTitle" placeholder="Kitap Adı ve Yazar" required class="rounded-lg border border-slate-300 px-2.5 py-2 text-xs sm:col-span-2" />
+        <input type="text" id="newReadRange" placeholder="Tarih (Örn: 1-15 Ekim)" required class="rounded-lg border border-slate-300 px-2.5 py-2 text-xs" />
+        <button type="submit" class="bg-purple-700 text-white font-bold text-xs rounded-lg px-3 py-2 hover:bg-purple-800">+ Liste Ekle</button>
+      </form>
+
+      <div id="readingListContainer" class="space-y-2 max-h-96 overflow-y-auto"></div>
+    </div>
+  </div>
+
+  <script>
+    const SABIT_BULUT_URL = "https://script.google.com/macros/s/AKfycbzJnbyF9GQGpHx49NHAcmVNTuYer-Zfmmx3lOEmtccv3I3CBzvyuQ5EhAncdIU8glKplQ/exec";
+
+    const SUBJECTS = {
+      MAT6: { name: 'Matematik (Okul)', teacher: 'Hakan Berber', color: 'border-blue-500 bg-blue-50/70 text-blue-950', badge: 'bg-blue-100 text-blue-800', bookBadge: 'bg-blue-200 text-blue-900', days: [3, 4, 5] },
+      FEN6: { name: 'Fen Bilimleri (Okul)', teacher: 'Arzu Ataman', color: 'border-emerald-500 bg-emerald-50/70 text-emerald-950', badge: 'bg-emerald-100 text-emerald-800', bookBadge: 'bg-emerald-200 text-emerald-900', days: [2, 3] },
+      TRK7: { name: 'Türkçe (Okul)', teacher: 'Azize Kartal', color: 'border-rose-500 bg-rose-50/70 text-rose-950', badge: 'bg-rose-100 text-rose-800', bookBadge: 'bg-rose-200 text-rose-900', days: [1, 4, 5] },
+      SOS6: { name: 'Sosyal Bilgiler', teacher: 'Müjgan Özler', color: 'border-orange-500 bg-orange-50/70 text-orange-950', badge: 'bg-orange-100 text-orange-800', bookBadge: 'bg-orange-200 text-orange-900', days: [4, 5] },
+      YD7:  { name: 'Yabancı Dil (İngilizce)', teacher: 'Yasemin Koyun', color: 'border-amber-500 bg-amber-50/70 text-amber-950', badge: 'bg-amber-100 text-amber-800', bookBadge: 'bg-amber-200 text-amber-900', days: [2, 3] },
+      DIN6: { name: 'Din Kültürü ve Ahlak B.', teacher: 'Merve Asal', color: 'border-purple-500 bg-purple-50/70 text-purple-950', badge: 'bg-purple-100 text-purple-800', bookBadge: 'bg-purple-200 text-purple-900', days: [1] },
+      OZEL_MAT: { name: 'Özel Ders - Matematik', teacher: 'Özel Ders', color: 'border-indigo-500 bg-indigo-50/80 text-indigo-950', badge: 'bg-indigo-200 text-indigo-900', bookBadge: 'bg-indigo-300 text-indigo-950', days: [1, 2, 3, 4, 5] },
+      OZEL_FEN: { name: 'Özel Ders - Fen Bilimleri', teacher: 'Özel Ders', color: 'border-teal-500 bg-teal-50/80 text-teal-950', badge: 'bg-teal-200 text-teal-900', bookBadge: 'bg-teal-300 text-teal-950', days: [1, 2, 3, 4, 5] },
+      OZEL_TRK: { name: 'Özel Ders - Türkçe', teacher: 'Özel Ders', color: 'border-pink-500 bg-pink-50/80 text-pink-950', badge: 'bg-pink-200 text-pink-900', bookBadge: 'bg-pink-300 text-pink-950', days: [1, 2, 3, 4, 5] },
+      KİTAP: { name: 'Kitap Okuma Görevi', teacher: 'Azize Kartal', color: 'border-purple-600 bg-purple-100/80 text-purple-950', badge: 'bg-purple-300 text-purple-950', bookBadge: 'bg-purple-400 text-purple-950', days: [1, 2, 3, 4, 5] }
+    };
+
+    const WEEKLY_TIMETABLE = {
+      1: ['DIN6 (2)', 'A.VAT7 (1)', 'TRK7 (2)', 'YPYZK7 (2)'],
+      2: ['FEN6 (2)', 'BED6 (2)', 'GS6 (1)', 'YD7 (2)'],
+      3: ['FEN6 (2)', 'REHB (1)', 'MÜZ6 (1)', 'YD7 (2)', 'MAT6 (1)'],
+      4: ['MAT6 (2)', 'TRK7 (2)', 'TTAS7 (2)', 'SOS6 (1)'],
+      5: ['MAT6 (2)', 'SFS17 (2)', 'SOS6 (2)', 'TRK7 (1)']
+    };
+
+    const DEFAULT_BOOKS = [
+      { id: 'b1', subject: 'FEN6', title: 'Gizli Yayınları - Usta İşi Fen Bilimleri Soru Bankası' },
+      { id: 'b2', subject: 'FEN6', title: 'Jett (Ünlüler Karması) - Fen Bilimleri Fasikülleri' },
+      { id: 'b3', subject: 'FEN6', title: 'Fenomen (7B) - Fen Bilimleri Soru Bankası' },
+      { id: 'b4', subject: 'FEN6', title: 'Hız Yayınları - 32 Haftalık Deneme Fen Bilimleri' },
+      { id: 'b5', subject: 'TRK7', title: 'Fenomen - 7. Sınıf Türkçe Fasikülleri (6 Fasikül)' },
+      { id: 'b6', subject: 'TRK7', title: 'Ankara Yayıncılık - Güçlendiren Paragraf Soru Bankası' },
+      { id: 'b7', subject: 'MAT6', title: 'Ulti Yayınları - Matematik Fasikülleri' },
+      { id: 'b8', subject: 'OZEL_MAT', title: 'Mozaik Bağlam Temelli Matematik Soru Bankası' },
+      { id: 'b9', subject: 'OZEL_MAT', title: 'Soru Hazinesi Matematik' },
+      { id: 'b10', subject: 'OZEL_MAT', title: 'Adım Adım Zirveye Matematik' },
+      { id: 'b11', subject: 'OZEL_MAT', title: 'Fenomen 7B Matematik Soru Bankası' },
+      { id: 'b12', subject: 'OZEL_MAT', title: 'HiperZeka Bağlam Matematik Soru Bankası' },
+      { id: 'b13', subject: 'OZEL_MAT', title: 'Kondisyon Haftalık Denemeler Matematik' },
+      { id: 'b14', subject: 'OZEL_TRK', title: 'Mozaik 7. Sınıf Paragraf Soru Bankası' },
+      { id: 'b15', subject: 'OZEL_TRK', title: 'Mozaik Türkçe Fasikül Defter' },
+      { id: 'b16', subject: 'OZEL_TRK', title: 'Madalyonun Yüzü Paragraf' }
+    ];
+
+    const DEFAULT_READING_LIST = [
+      { id: 'r1', title: 'Dünya Yaramazlık Tarihi (Şermin Yaşar)', range: '1-15 Ekim', start: '2026-10-01', end: '2026-10-15' },
+      { id: 'r2', title: 'Rüzgarı Dizginleyen Çocuk (W. Kamkwama)', range: '15-30 Ekim', start: '2026-10-15', end: '2026-10-30' },
+      { id: 'r3', title: 'Mustafa Kemal’in Kayıp Seslerinin İzinde (Mavisel Yener)', range: '31 Ekim-15 Kasım', start: '2026-10-31', end: '2026-11-15' },
+      { id: 'r4', title: 'Vatanın Kalbi (Metin Özdamarlar)', range: '15-30 Kasım', start: '2026-11-15', end: '2026-11-30' },
+      { id: 'r5', title: 'Almarpa’nın Gizemi (Koray Avcı Çakman)', range: '1-15 Aralık', start: '2026-12-01', end: '2026-12-15' },
+      { id: 'r6', title: 'Son Adanın Çocukları (Zülfü Livaneli)', range: '15-30 Aralık', start: '2026-12-15', end: '2026-12-30' },
+      { id: 'r7', title: 'Avucunuzdaki Kelebek (Ahmet Ş. İzgören)', range: '31 Aralık-15 Ocak', start: '2026-12-31', end: '2027-01-15' },
+      { id: 'r8', title: 'Sisin Sakladıkları (Miyase Sertbarut)', range: '15 Ocak-10 Şubat', start: '2027-01-15', end: '2027-02-10' },
+      { id: 'r9', title: 'Dünyayı Sırtında Taşıyan Balık (Özgür Balpınar)', range: '10-25 Şubat', start: '2027-02-10', end: '2027-02-25' },
+      { id: 'r10', title: 'Limon Kütüphanesi (Jo Cotteril)', range: '25 Şubat-15 Mart', start: '2027-02-25', end: '2027-03-15' },
+      { id: 'r11', title: 'Satranç (Stefan Zweig)', range: '15-30 Mart', start: '2027-03-15', end: '2027-03-30' },
+      { id: 'r12', title: 'Kapiland’ın Kobayları (Miyase Sertbarut)', range: '1-15 Nisan', start: '2027-04-01', end: '2027-04-15' },
+      { id: 'r13', title: 'Liste (Patricia Forde)', range: '15 Nisan-5 Mayıs', start: '2027-04-15', end: '2027-05-05' },
+      { id: 'r14', title: 'Mucize (R.J. Palacio)', range: '7-28 Mayıs', start: '2027-05-07', end: '2027-05-28' }
+    ];
+
+    let assignments = [];
+    let books = DEFAULT_BOOKS;
+    let readingList = DEFAULT_READING_LIST;
+    let cloudUrl = SABIT_BULUT_URL;
+    let currentMonday = getMonday(new Date());
+
+    function getMonday(d) {
+      const date = new Date(d);
+      const day = date.getDay();
+      const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+      date.setDate(diff);
+      date.setHours(0, 0, 0, 0);
+      return date;
+    }
+
+    function formatDateISO(d) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function formatShortDate(iso) {
+      if (!iso) return '';
+      const [y, m, d] = iso.split('-');
+      const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+      return `${parseInt(d)} ${months[parseInt(m) - 1]}`;
+    }
+
+    async function toggleKioskMode() {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+        document.getElementById('btnKiosk').textContent = '⏹️ Normal Mod';
+      } else {
+        if (document.exitFullscreen) await document.exitFullscreen();
+        document.getElementById('btnKiosk').textContent = '📺 Tam Ekran';
+      }
+    }
+
+    setInterval(() => { if (cloudUrl) syncFromCloud(false); }, 120000);
+
+    function updateSyncBadge(state, text) {
+      const dot = document.getElementById('syncDot');
+      const label = document.getElementById('syncText');
+      if (state === 'ok') {
+        dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+        label.textContent = text || 'Bulut Aktif';
+      } else if (state === 'wait') {
+        dot.className = 'w-2 h-2 rounded-full bg-amber-500 animate-ping';
+        label.textContent = text || 'Yükleniyor...';
+      } else {
+        dot.className = 'w-2 h-2 rounded-full bg-rose-500';
+        label.textContent = text || 'Çevrimdışı';
+      }
+    }
+
+    async function syncFromCloud(manual = false) {
+      if (!cloudUrl) return;
+      if (manual) updateSyncBadge('wait', 'Eşitleniyor...');
+      try {
+        const sep = cloudUrl.includes('?') ? '&' : '?';
+        const res = await fetch(`${cloudUrl}${sep}action=load&t=${Date.now()}`);
+        const json = await res.json();
+        if (json.status === 'ok' && json.data) {
+          if (Array.isArray(json.data.assignments)) assignments = json.data.assignments;
+          if (Array.isArray(json.data.books) && json.data.books.length > 0) books = json.data.books;
+          if (Array.isArray(json.data.readingList) && json.data.readingList.length > 0) readingList = json.data.readingList;
+          renderAll();
+          updateSyncBadge('ok');
+        }
+      } catch (e) {
+        updateSyncBadge('err');
+      }
+    }
+
+    async function persistData() {
+      renderAll();
+      if (!cloudUrl) return;
+      updateSyncBadge('wait', 'Kaydediliyor...');
+      try {
+        await fetch(cloudUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ assignments, books, readingList })
+        });
+        updateSyncBadge('ok');
+      } catch (e) {
+        updateSyncBadge('err', 'Kayıt Hatası');
+      }
+    }
+
+    function renderAll() {
+      document.getElementById('bookCountBadge').textContent = books.length;
+      document.getElementById('readingCountBadge').textContent = readingList.length;
+      renderPopupBanner();
+      renderOverdue();
+      renderStats();
+      renderCalendar();
+    }
+
+    function renderPopupBanner() {
+      const todayISO = formatDateISO(new Date());
+      const todayDue = assignments.filter(a => !a.completed && a.dueDate === todayISO);
+      const banner = document.getElementById('livePopupBanner');
+      const textEl = document.getElementById('livePopupText');
+
+      if (todayDue.length > 0) {
+        banner.classList.remove('hidden');
+        textEl.textContent = `Bugün kontrol edilecek ${todayDue.length} adet görev/ödev var! Lütfen zamanında tamamlayın.`;
+      } else {
+        banner.classList.add('hidden');
+      }
+    }
+
+    function renderStats() {
+      const todayISO = formatDateISO(new Date());
+      let pending = 0, done = 0, todayControl = 0;
+
+      assignments.forEach(a => {
+        if (a.completed) done++; else pending++;
+        if (a.dueDate === todayISO) todayControl++;
+      });
+
+      const total = assignments.length;
+      const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+
+      document.getElementById('statPendingCount').textContent = pending;
+      document.getElementById('statDoneCount').textContent = done;
+      document.getElementById('statTodayCheck').textContent = todayControl;
+      document.getElementById('statPercentText').textContent = percent + '%';
+      document.getElementById('statProgressBar').style.width = percent + '%';
+    }
+
+    function renderOverdue() {
+      const todayISO = formatDateISO(new Date());
+      const overdueItems = assignments.filter(a => !a.completed && a.dueDate < todayISO);
+      const sec = document.getElementById('overdueSection');
+      const list = document.getElementById('overdueList');
+      document.getElementById('overdueCountBadge').textContent = overdueItems.length;
+
+      if (overdueItems.length === 0) {
+        sec.classList.add('hidden');
+        return;
+      }
+      sec.classList.remove('hidden');
+      list.innerHTML = overdueItems.map(a => {
+        const subj = SUBJECTS[a.subject] || { name: a.subject, badge: 'bg-slate-200' };
+        return `
+          <div class="bg-white border border-rose-200 rounded-xl p-3 shadow-xs flex flex-col justify-between gap-2">
+            <div>
+              <div class="flex items-center justify-between gap-1 mb-1">
+                <span class="text-xs font-bold px-2 py-0.5 rounded-md ${subj.badge}">${subj.name}</span>
+                <span class="text-xs font-bold text-rose-600">Kontrol: ${formatShortDate(a.dueDate)} (Geçti)</span>
+              </div>
+              <div class="text-xs font-bold text-slate-800">${a.book}</div>
+              <div class="text-xs text-slate-600 mt-0.5">${a.description}</div>
+              ${a.teacherNote ? `<div class="text-[11px] text-indigo-700 italic mt-1">📌 ${a.teacherNote}</div>` : ''}
+            </div>
+            <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button onclick="toggleComplete('${a.id}')" class="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[11px] font-bold hover:bg-emerald-700">✓ Tamamlandı Yap</button>
+              <button onclick="editHomework('${a.id}')" class="px-2 py-1 text-indigo-600 text-xs">Düzenle</button>
+              <button onclick="deleteHomework('${a.id}')" class="px-2 py-1 text-slate-400 hover:text-rose-600 text-xs">Sil</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderCalendar() {
+      const grid = document.getElementById('calendarGrid');
+      const dayNames = ['PAZARTESİ', 'SALI', 'ÇARŞAMBA', 'PERŞEMBE', 'CUMA'];
+      const todayISO = formatDateISO(new Date());
+
+      const friday = new Date(currentMonday);
+      friday.setDate(friday.getDate() + 4);
+      document.getElementById('weekRangeLabel').textContent =
+        `${formatShortDate(formatDateISO(currentMonday))} - ${formatShortDate(formatDateISO(friday))} ${friday.getFullYear()}`;
+
+      const fSubj = document.getElementById('filterSubject').value;
+      const fStatus = document.getElementById('filterStatus').value;
+
+      let html = '';
+      for (let i = 0; i < 5; i++) {
+        const d = new Date(currentMonday);
+        d.setDate(d.getDate() + i);
+        const iso = formatDateISO(d);
+        const isToday = iso === todayISO;
+        const daySchedule = WEEKLY_TIMETABLE[i + 1] || [];
+
+        let dayTasks = assignments.filter(a => a.assignedDate <= iso && a.dueDate >= iso);
+
+        readingList.forEach(r => {
+          if (iso >= r.start && iso <= r.end) {
+            const readingId = 'read_' + r.id;
+            if (!dayTasks.some(t => t.id === readingId)) {
+              dayTasks.push({
+                id: readingId,
+                subject: 'KİTAP',
+                book: '📖 7/K Türkçe Kitap Okuma Listesi',
+                assignedDate: r.start,
+                dueDate: r.end,
+                description: r.title + ' (' + r.range + ') okunuyor, özeti hazırlanacak.',
+                teacherNote: 'Azize hoca sınav/özet kontrolü yapacak.',
+                completed: false,
+                isReading: true
+              });
+            }
+          }
+        });
+
+        if (fSubj !== 'ALL') dayTasks = dayTasks.filter(a => a.subject === fSubj);
+        if (fStatus === 'PENDING') dayTasks = dayTasks.filter(a => !a.completed);
+        if (fStatus === 'DONE') dayTasks = dayTasks.filter(a => a.completed);
+
+        html += `
+          <div class="bg-white rounded-2xl border ${isToday ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-slate-200'} flex flex-col overflow-hidden shadow-xs">
+            <div class="p-3 border-b ${isToday ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-800'}">
+              <div class="flex items-center justify-between">
+                <span class="font-extrabold text-sm">${dayNames[i]}</span>
+                <div class="flex items-center gap-1">
+                  ${isToday ? `<span class="text-[10px] font-extrabold bg-white text-indigo-700 px-1.5 py-0.5 rounded">BUGÜN</span>` : ''}
+                  <span class="text-xs font-bold opacity-85">${formatShortDate(iso)}</span>
+                </div>
+              </div>
+              <div class="text-[11px] font-semibold mt-2 opacity-75">O GÜNÜN DERSLERİ:</div>
+              <div class="flex flex-wrap gap-1 mt-1">
+                ${daySchedule.map(s => `<span class="text-[10px] px-1.5 py-0.5 rounded ${isToday ? 'bg-indigo-500 text-white' : 'bg-slate-200/80 text-slate-700'} font-semibold">${s.split(' ')[0]}</span>`).join('')}
+              </div>
+            </div>
+
+            <div class="p-3 space-y-3 flex-1">
+              ${dayTasks.length === 0 ? `<div class="text-center py-10 text-xs text-slate-400">Görev yok</div>` : dayTasks.map(a => {
+                const subj = SUBJECTS[a.subject] || { name: a.subject, color: 'border-slate-400 bg-slate-50', badge: 'bg-slate-200', bookBadge: 'bg-slate-200' };
+                const isDueDay = a.dueDate === iso;
+                return `
+                  <div class="border-l-4 rounded-xl p-3 transition shadow-2xs ${subj.color} ${a.completed ? 'completed-card' : ''}">
+                    <div class="flex items-start justify-between gap-1">
+                      <label class="flex items-center gap-2 cursor-pointer select-none">
+                        <input type="checkbox" ${a.completed ? 'checked' : ''} onchange="toggleComplete('${a.id}')" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500" />
+                        <span class="text-[11px] font-extrabold px-2 py-0.5 rounded ${subj.badge}">${subj.name}</span>
+                      </label>
+                      <div class="flex items-center gap-1">
+                        ${isDueDay ? `<span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-rose-600 text-white">Teslim Günü!</span>` : `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">Devam Ediyor</span>`}
+                        ${!a.isReading ? `<button onclick="editHomework('${a.id}')" class="text-slate-400 hover:text-indigo-600 text-xs px-1" title="Düzenle">✏️</button><button onclick="deleteHomework('${a.id}')" class="text-slate-400 hover:text-rose-600 text-xs px-1" title="Sil">✕</button>` : ''}
+                      </div>
+                    </div>
+
+                    <div class="mt-2">
+                      <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${subj.bookBadge}">${a.book}</span>
+                    </div>
+
+                    <div class="mt-1 text-xs font-bold ${a.completed ? 'completed-text' : 'text-slate-900'}">${a.description}</div>
+                    
+                    ${a.teacherNote ? `<div class="mt-1.5 text-[11px] text-indigo-800 font-medium bg-indigo-50/80 p-1.5 rounded-lg border border-indigo-100">📌 ${a.teacherNote}</div>` : ''}
+
+                    <div class="mt-2 pt-1.5 border-t border-black/5 flex items-center justify-between text-[10px] text-slate-500 font-medium">
+                      <span>Veriliş: ${formatShortDate(a.assignedDate)}</span>
+                      <span class="font-bold">Kontrol: ${formatShortDate(a.dueDate)}</span>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      grid.innerHTML = html;
+    }
+
+    function populateSubjSelects() {
+      const opts = Object.entries(SUBJECTS).map(([k, v]) => `<option value="${k}">${v.name} (${v.teacher})</option>`).join('');
+      document.getElementById('hwSubject').innerHTML = opts;
+      document.getElementById('newBookSubject').innerHTML = opts;
+    }
+
+    function onSubjectChange() {
+      const subj = document.getElementById('hwSubject').value;
+      const filtered = books.filter(b => b.subject === subj);
+      document.getElementById('hwBook').innerHTML = filtered.map(b => `<option value="${b.title}">${b.title}</option>`).join('') +
+        `<option value="Özel Ders / Çalışma Kağıdı">Özel Ders / Çalışma Kağıdı</option>`;
+      suggestNextClassDate();
+    }
+
+    function suggestNextClassDate() {
+      const subjKey = document.getElementById('hwSubject').value;
+      const assignedVal = document.getElementById('hwAssignedDate').value;
+      if (!subjKey || !assignedVal) return;
+
+      const classDays = SUBJECTS[subjKey]?.days || [1, 2, 3, 4, 5];
+      const start = new Date(assignedVal);
+      let nextClass = null;
+
+      for (let i = 1; i <= 10; i++) {
+        const candidate = new Date(start);
+        candidate.setDate(candidate.getDate() + i);
+        if (classDays.includes(candidate.getDay())) {
+          nextClass = formatDateISO(candidate);
+          break;
+        }
+      }
+
+      if (nextClass) {
+        document.getElementById('hwDueDate').value = nextClass;
+        document.getElementById('smartDateSuggestion').innerHTML = `
+          <span>💡 Önerilen Tarih: <strong>${formatShortDate(nextClass)}</strong></span>
+          <button type="button" onclick="document.getElementById('hwDueDate').value='${nextClass}'" class="px-2 py-0.5 bg-white rounded border border-indigo-200 font-bold">Uygula</button>
+        `;
+      }
+    }
+
+    function openAddModal() {
+      populateSubjSelects();
+      document.getElementById('editingId').value = '';
+      document.getElementById('modalTitle').textContent = 'Yeni Ödev / Görev Kaydı';
+      document.getElementById('saveButtonText').textContent = 'Kaydet';
+      document.getElementById('hwAssignedDate').value = formatDateISO(new Date());
+      onSubjectChange();
+      document.getElementById('hwDescription').value = '';
+      document.getElementById('hwTeacherNote').value = '';
+      document.getElementById('addModal').classList.remove('hidden');
+      document.getElementById('addModal').classList.add('flex');
+    }
+
+    function editHomework(id) {
+      const item = assignments.find(a => a.id === id);
+      if (!item) return;
+      populateSubjSelects();
+      document.getElementById('editingId').value = item.id;
+      document.getElementById('modalTitle').textContent = 'Görevi Düzenle';
+      document.getElementById('saveButtonText').textContent = 'Güncelle';
+      
+      document.getElementById('hwSubject').value = item.subject;
+      onSubjectChange();
+      document.getElementById('hwBook').value = item.book;
+      document.getElementById('hwAssignedDate').value = item.assignedDate;
+      document.getElementById('hwDueDate').value = item.dueDate;
+      document.getElementById('hwDescription').value = item.description;
+      document.getElementById('hwTeacherNote').value = item.teacherNote || '';
+
+      document.getElementById('addModal').classList.remove('hidden');
+      document.getElementById('addModal').classList.add('flex');
+    }
+
+    function closeAddModal() {
+      document.getElementById('addModal').classList.add('hidden');
+      document.getElementById('addModal').classList.remove('flex');
+    }
+
+    function saveHomework(e) {
+      e.preventDefault();
+      const editingId = document.getElementById('editingId').value;
+      const assignedDate = document.getElementById('hwAssignedDate').value;
+      const dueDate = document.getElementById('hwDueDate').value;
+
+      if (dueDate < assignedDate) {
+        alert('Teslim tarihi veriliş tarihinden önce olamaz!');
+        return;
+      }
+
+      const homeworkData = {
+        subject: document.getElementById('hwSubject').value,
+        book: document.getElementById('hwBook').value,
+        assignedDate,
+        dueDate,
+        description: document.getElementById('hwDescription').value.trim(),
+        teacherNote: document.getElementById('hwTeacherNote').value.trim()
+      };
+
+      if (editingId) {
+        const item = assignments.find(a => a.id === editingId);
+        if (item) Object.assign(item, homeworkData);
+      } else {
+        assignments.push({
+          id: 'hw_' + Date.now(),
+          ...homeworkData,
+          completed: false
+        });
+      }
+
+      closeAddModal();
+      persistData();
+    }
+
+    function toggleComplete(id) {
+      if (id.startsWith('read_')) {
+        const realId = id.replace('read_', '');
+        let item = assignments.find(a => a.id === id);
+        if (item) {
+          item.completed = !item.completed;
+        } else {
+          const r = readingList.find(x => x.id === realId);
+          assignments.push({
+            id: id,
+            subject: 'KİTAP',
+            book: '📖 7/K Türkçe Kitap Okuma Listesi',
+            assignedDate: r.start,
+            dueDate: r.end,
+            description: r.title,
+            completed: true
+          });
+        }
+      } else {
+        const item = assignments.find(a => a.id === id);
+        if (item) item.completed = !item.completed;
+      }
+      persistData();
+    }
+
+    function deleteHomework(id) {
+      if (!confirm('Bu görevi silmek istediğinize emin misiniz?')) return;
+      assignments = assignments.filter(a => a.id !== id);
+      persistData();
+    }
+
+    // KİTAPLIK YÖNETİMİ
+    function openBooksModal() {
+      populateSubjSelects();
+      renderBooksList();
+      document.getElementById('booksModal').classList.remove('hidden');
+      document.getElementById('booksModal').classList.add('flex');
+    }
+    function closeBooksModal() {
+      document.getElementById('booksModal').classList.add('hidden');
+      document.getElementById('booksModal').classList.remove('flex');
+    }
+    function renderBooksList() {
+      document.getElementById('booksListContainer').innerHTML = books.map(b => {
+        const s = SUBJECTS[b.subject] || { name: b.subject, badge: 'bg-slate-200' };
+        return `
+          <div class="flex items-center justify-between p-2.5 bg-white border rounded-xl text-xs">
+            <div class="flex items-center gap-2">
+              <span class="font-bold px-2 py-0.5 rounded ${s.badge}">${s.name}</span>
+              <span class="font-semibold text-slate-800">${b.title}</span>
+            </div>
+            <button onclick="deleteBook('${b.id}')" class="text-rose-500 hover:text-rose-700 font-bold px-2">Sil</button>
+          </div>
+        `;
+      }).join('');
+    }
+    function addNewBook(e) {
+      e.preventDefault();
+      books.push({
+        id: 'b_' + Date.now(),
+        subject: document.getElementById('newBookSubject').value,
+        title: document.getElementById('newBookTitle').value.trim()
+      });
+      document.getElementById('newBookTitle').value = '';
+      renderBooksList();
+      persistData();
+    }
+    function deleteBook(id) {
+      books = books.filter(b => b.id !== id);
+      renderBooksList();
+      persistData();
+    }
+
+    // OKUMA LİSTESİ YÖNETİMİ
+    function openReadingModal() {
+      renderReadingList();
+      document.getElementById('readingModal').classList.remove('hidden');
+      document.getElementById('readingModal').classList.add('flex');
+    }
+    function closeReadingModal() {
+      document.getElementById('readingModal').classList.add('hidden');
+      document.getElementById('readingModal').classList.remove('flex');
+    }
+    function renderReadingList() {
+      document.getElementById('readingListContainer').innerHTML = readingList.map(r => `
+        <div class="flex items-center justify-between p-2.5 bg-white border rounded-xl text-xs">
+          <div>
+            <span class="font-bold text-purple-900 bg-purple-100 px-2 py-0.5 rounded mr-2">${r.range}</span>
+            <span class="font-semibold text-slate-800">${r.title}</span>
+          </div>
+          <button onclick="deleteReadingBook('${r.id}')" class="text-rose-500 hover:text-rose-700 font-bold px-2">Sil</button>
+        </div>
+      `).join('');
+    }
+    function addNewReadingBook(e) {
+      e.preventDefault();
+      const title = document.getElementById('newReadTitle').value.trim();
+      const range = document.getElementById('newReadRange').value.trim();
+      readingList.push({
+        id: 'r_' + Date.now(),
+        title,
+        range,
+        start: '2026-10-01',
+        end: '2027-06-01'
+      });
+      document.getElementById('newReadTitle').value = '';
+      document.getElementById('newReadRange').value = '';
+      renderReadingList();
+      persistData();
+    }
+    function deleteReadingBook(id) {
+      readingList = readingList.filter(r => r.id !== id);
+      renderReadingList();
+      persistData();
+    }
+
+    function changeWeek(dir) {
+      currentMonday.setDate(currentMonday.getDate() + dir * 7);
+      renderCalendar();
+    }
+    function goToday() {
+      currentMonday = getMonday(new Date());
+      renderCalendar();
+    }
+
+    // Başlangıç
+    syncFromCloud(true);
+  </script>
+</body>
+</html>
